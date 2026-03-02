@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Brain SLI Lifecycle — PR Workflow Prototype
 
-## Getting Started
+Interactive walkthrough demonstrating a PR-style change management workflow for SLI updates in Brain (Microsoft's AI-powered health and monitoring system for Azure).
 
-First, run the development server:
+## The Problem
+
+Today, updating an SLI is risky — it can cause detection blackouts, pipeline overloads, and there's no version control. This prototype shows how a PR-style workflow would make SLI changes safe and reviewable.
+
+## The 4-Step Flow
+
+1. **Edit SLI** — YAML editor with quality checks and signal preview
+2. **PR Generated** — Diff view, automated checks, approval policy selection
+3. **Training & Monitoring** — Timeline of Brain model retraining progress
+4. **Review & Merge** — ADO-style PR review with differential metrics, AI recommendation, and go-live scheduling
+
+## Setup
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) and click "Start Walkthrough".
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Next.js 15 (App Router)
+- TypeScript
+- Tailwind CSS
+- All mock data — no external APIs
 
-## Learn More
+## Build
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+```
