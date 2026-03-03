@@ -1,76 +1,132 @@
-export const OLD_SLO_YAML = `apiVersion: slo/v2
-kind: ServiceLevelObjective
-metadata:
-  name: cosmosdb-availability
-  service: CosmosDB
-  owner: cosmosdb-oncall@microsoft.com
-spec:
-  description: "CosmosDB document read/write success rate"
-  slis:
-    - name: success-rate
-      type: availability
-      metric:
-        source: geneva/mdm
-        namespace: CosmosDB
-        metric: RequestSuccessRate
-      dimensions:
-        - name: Region
-          type: location
-        - name: DatabaseAccount
-          type: resource
-      objective:
-        target: 99.95
-        window: 1h
-  brain:
-    monitor: cosmosdb-success-rate
-    mode: outage
-    models:
-      - opm
-      - error-budget`;
+export const OLD_SLO_YAML = `service-id: 724c33bf-1ab8-4691-adb1-0e61932919c2
+datasources:
+  - id: cosmosdbmdm
+    type: mdm
+    accountIds:
+      - DocumentDB
+      - DocumentDB-Fairfax
+      - DocumentDB-Mooncake
 
-export const NEW_SLO_YAML = `apiVersion: slo/v2
-kind: ServiceLevelObjective
-metadata:
-  name: cosmosdb-availability
-  service: CosmosDB
-  owner: cosmosdb-oncall@microsoft.com
-spec:
-  description: "CosmosDB document read/write success rate"
-  slis:
-    - name: success-rate
-      type: availability
-      metric:
-        source: geneva/mdm
-        namespace: CosmosDB
-        metric: RequestSuccessRate
-      dimensions:
-        - name: Region
-          type: location
-        - name: DatabaseAccount
-          type: resource
-        - name: PartitionKey
-          type: partition
-      objective:
-        target: 99.95
-        window: 1h
-  brain:
-    monitor: cosmosdb-success-rate
-    mode: outage
-    models:
-      - opm
-      - error-budget`;
+slo-groups:
+  - name: Cosmos DB Availability - V4
+    state: Production
+    slis:
+      - name: Regional DatabaseAccount Availability - V4
+        source-id: cosmosdbmdm
+        category: Availability
+        description: Regional Database Account Availability - 99.999% for Read and Write in 5m
+
+        window: 5m
+
+        namespace: DocDB
+        signal: |-
+          metric("CosmosDBRequest")
+          .dimensions(
+            "Microsoft.resourceId" as CustomerResourceId,
+            "IsExternal",
+            "LocationId" as LocationId)
+          .samplingTypes("Count")
+          | where IsExternal == "True"
+              and LocationId !in ("<empty>", "ms-loc://az/azurepubliccloud/centralus",
+          "ms-loc://az/azurepubliccloud/eastus")
+              and CustomerResourceId !in ("_empty")
+          | summarize
+              TotalRequests = sum(Count)
+            by
+              CustomerResourceId,
+              LocationId
+          | join kind = leftouter
+          (
+              metric("CosmosDBRequest")
+              .dimensions(
+                "Microsoft.resourceId" as CustomerResourceId,
+                "IsExternal",
+                "LocationId" as LocationId)
+              .samplingTypes("Count")
+              | where IsExternal == "True"
+                  and StatusCode startswith "5"
+              | summarize
+                  FailedRequests = sum(Count)
+                by
+                  CustomerResourceId,
+                  LocationId
+          ) on CustomerResourceId, LocationId`;
+
+export const NEW_SLO_YAML = `service-id: 724c33bf-1ab8-4691-adb1-0e61932919c2
+datasources:
+  - id: cosmosdbmdm
+    type: mdm
+    accountIds:
+      - DocumentDB
+      - DocumentDB-Fairfax
+      - DocumentDB-Mooncake
+
+slo-groups:
+  - name: Cosmos DB Availability - V4
+    state: Production
+    slis:
+      - name: Regional DatabaseAccount Availability - V4
+        source-id: cosmosdbmdm
+        category: Availability
+        description: Regional Database Account Availability - 99.999% for Read and Write in 5m
+
+        window: 5m
+
+        namespace: DocDB
+        signal: |-
+          metric("CosmosDBRequest")
+          .dimensions(
+            "Microsoft.resourceId" as CustomerResourceId,
+            "IsExternal",
+            "LocationId" as LocationId,
+            "PartitionKey" as PartitionKey)
+          .samplingTypes("Count")
+          | where IsExternal == "True"
+              and LocationId !in ("<empty>", "ms-loc://az/azurepubliccloud/centralus",
+          "ms-loc://az/azurepubliccloud/eastus")
+              and CustomerResourceId !in ("_empty")
+          | summarize
+              TotalRequests = sum(Count)
+            by
+              CustomerResourceId,
+              LocationId,
+              PartitionKey
+          | join kind = leftouter
+          (
+              metric("CosmosDBRequest")
+              .dimensions(
+                "Microsoft.resourceId" as CustomerResourceId,
+                "IsExternal",
+                "LocationId" as LocationId,
+                "PartitionKey" as PartitionKey)
+              .samplingTypes("Count")
+              | where IsExternal == "True"
+                  and StatusCode startswith "5"
+              | summarize
+                  FailedRequests = sum(Count)
+                by
+                  CustomerResourceId,
+                  LocationId,
+                  PartitionKey
+          ) on CustomerResourceId, LocationId, PartitionKey`;
 
 export const DIFF_LINES: { type: "same" | "added" | "removed"; text: string }[] = [
-  { type: "same", text: "      dimensions:" },
-  { type: "same", text: "        - name: Region" },
-  { type: "same", text: "          type: location" },
-  { type: "same", text: "        - name: DatabaseAccount" },
-  { type: "same", text: "          type: resource" },
-  { type: "added", text: "        - name: PartitionKey" },
-  { type: "added", text: "          type: partition" },
-  { type: "same", text: "      objective:" },
-  { type: "same", text: "        target: 99.95" },
-  { type: "same", text: "        window: 1h" },
+  { type: "same", text: '          .dimensions(' },
+  { type: "same", text: '            "Microsoft.resourceId" as CustomerResourceId,' },
+  { type: "same", text: '            "IsExternal",' },
+  { type: "removed", text: '            "LocationId" as LocationId)' },
+  { type: "added", text: '            "LocationId" as LocationId,' },
+  { type: "added", text: '            "PartitionKey" as PartitionKey)' },
+  { type: "same", text: '          .samplingTypes("Count")' },
+  { type: "same", text: '          | where IsExternal == "True"' },
+  { type: "same", text: '              and LocationId !in ("<empty>", ...)' },
+  { type: "same", text: '          | summarize' },
+  { type: "same", text: '              TotalRequests = sum(Count)' },
+  { type: "same", text: '            by' },
+  { type: "same", text: '              CustomerResourceId,' },
+  { type: "removed", text: '              LocationId' },
+  { type: "added", text: '              LocationId,' },
+  { type: "added", text: '              PartitionKey' },
 ];
 
 export const QUALITY_CHECKS = [
@@ -147,8 +203,20 @@ export const SAMPLE_INCIDENTS = [
   },
 ];
 
-export const REVIEWERS = [
-  { name: "Sarah Chen", role: "Brain SRE Lead", avatar: "SC", status: "approved" as const },
-  { name: "James Park", role: "CosmosDB Oncall", avatar: "JP", status: "approved" as const },
-  { name: "Priya Sharma", role: "SLI Platform", avatar: "PS", status: "pending" as const },
-];
+export const REVIEWERS = {
+  required: [
+    { name: "James Chen", avatar: "JC", status: "pending" as const },
+  ],
+  optional: [
+    { name: "Sarah Patel", avatar: "SP", status: "approved" as const },
+    { name: "Alex Rivera", avatar: "AR", status: "pending" as const },
+    { name: "Mika Johansson", avatar: "MJ", status: "pending" as const },
+    { name: "Devon Bradley", avatar: "DB", status: "pending" as const },
+    { name: "Yuki Tanaka", avatar: "YT", status: "pending" as const },
+    { name: "Chris Morgan", avatar: "CM", status: "pending" as const },
+    { name: "Leah Foster", avatar: "LF", status: "pending" as const },
+    { name: "Raj Krishnan", avatar: "RK", status: "pending" as const },
+    { name: "Nina Vogt", avatar: "NV", status: "pending" as const },
+    { name: "Omar Hassan", avatar: "OH", status: "pending" as const },
+  ],
+};

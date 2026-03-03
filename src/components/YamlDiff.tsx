@@ -12,7 +12,7 @@ export default function YamlDiff({ mode = "unified" }: { mode?: "unified" | "sid
       <div className="grid grid-cols-2 gap-0 font-mono text-xs overflow-x-auto">
         <div className="border-r border-slate-600">
           <div className="px-3 py-1.5 bg-slate-700 text-slate-300 text-xs font-semibold border-b border-slate-600">
-            v1 (current)
+            vNow (current)
           </div>
           {Array.from({ length: maxLen }, (_, i) => {
             const line = oldLines[i];
@@ -25,7 +25,7 @@ export default function YamlDiff({ mode = "unified" }: { mode?: "unified" | "sid
         </div>
         <div>
           <div className="px-3 py-1.5 bg-slate-700 text-slate-300 text-xs font-semibold border-b border-slate-600">
-            v2 (proposed)
+            vNext (proposed)
           </div>
           {Array.from({ length: maxLen }, (_, i) => {
             const line = newLines[i];
