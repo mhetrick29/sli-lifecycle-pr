@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { REVIEW_METRICS, SAMPLE_INCIDENTS, REVIEWERS } from "../../data/mock";
+import { REVIEW_METRICS, SAMPLE_INCIDENTS, TRAINING_PERIOD_INCIDENTS, REVIEWERS } from "../../data/mock";
 import { Card, Button } from "../../components/UI";
 import YamlDiff from "../../components/YamlDiff";
 
@@ -572,53 +572,96 @@ export default function Step3() {
                   </div>
                 </Card>
 
-                {/* Incident Impact */}
-                <Card title="Incident Impact">
+                {/* Incident Impact — 2-sided comparison */}
+                <Card title="Incident Impact — Training Period Comparison">
+                  <p className="text-xs text-slate-500 mb-3">Side-by-side detection results from the shadow evaluation period (Jan 8 – Feb 1). Shows how each incident was handled by the current vs proposed monitor.</p>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
+                        {/* Group headers */}
                         <tr className="border-b border-slate-600">
-                          <th className="py-2 pr-4 text-left text-xs text-slate-500 font-medium">
-                            Change
-                          </th>
-                          <th className="py-2 px-4 text-left text-xs text-slate-500 font-medium">
-                            Incident
-                          </th>
-                          <th className="py-2 px-4 text-left text-xs text-slate-500 font-medium">
-                            Description
-                          </th>
-                          <th className="py-2 pl-4 text-left text-xs text-slate-500 font-medium">
-                            Reason
-                          </th>
+                          <th colSpan={3} className="py-2 text-center text-xs font-semibold text-slate-500 border-r border-slate-600">Incident</th>
+                          <th colSpan={2} className="py-2 text-center text-xs font-semibold text-blue-400 border-r border-slate-600 bg-blue-950/20">vCurrent</th>
+                          <th colSpan={2} className="py-2 text-center text-xs font-semibold text-teal-400 bg-teal-950/20">vNext (Proposed)</th>
+                        </tr>
+                        {/* Sub headers */}
+                        <tr className="border-b border-slate-600">
+                          <th className="py-1.5 pr-2 text-left text-[11px] text-slate-500 font-medium">Date</th>
+                          <th className="py-1.5 px-2 text-left text-[11px] text-slate-500 font-medium">Sev</th>
+                          <th className="py-1.5 px-2 text-left text-[11px] text-slate-500 font-medium border-r border-slate-600">Incident</th>
+                          <th className="py-1.5 px-2 text-center text-[11px] text-slate-500 font-medium bg-blue-950/10">Status</th>
+                          <th className="py-1.5 px-2 text-center text-[11px] text-slate-500 font-medium border-r border-slate-600 bg-blue-950/10">TTD</th>
+                          <th className="py-1.5 px-2 text-center text-[11px] text-slate-500 font-medium bg-teal-950/10">Status</th>
+                          <th className="py-1.5 px-2 text-center text-[11px] text-slate-500 font-medium bg-teal-950/10">TTD</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {SAMPLE_INCIDENTS.map((inc) => (
-                          <tr key={inc.id} className="border-b border-slate-700">
-                            <td className="py-2.5 pr-4">
-                              <span
-                                className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                  inc.status === "added"
-                                    ? "bg-green-900/50 text-green-400 border border-green-700"
-                                    : "bg-red-900/50 text-red-400 border border-red-700"
-                                }`}
-                              >
-                                {inc.status === "added" ? "+ Added" : "− Removed"}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-4 text-xs text-slate-400 font-mono">
-                              {inc.id}
-                            </td>
-                            <td className="py-2.5 px-4 text-sm text-slate-200">
-                              {inc.title}
-                            </td>
-                            <td className="py-2.5 pl-4 text-xs text-slate-500">
-                              {inc.detail}
-                            </td>
-                          </tr>
-                        ))}
+                        {TRAINING_PERIOD_INCIDENTS.map((inc) => {
+                          const vCurrLabel = inc.vCurrent.detected
+                            ? inc.vCurrent.noise ? "Noise" : "Detected"
+                            : "Missed";
+                          const vNextLabel = inc.vNext.detected
+                            ? inc.vNext.noise ? "Noise" : "Detected"
+                            : "Suppressed";
+                          const vCurrColor = inc.vCurrent.detected
+                            ? inc.vCurrent.noise ? "text-yellow-400 bg-yellow-900/30" : "text-green-400 bg-green-900/20"
+                            : "text-red-400 bg-red-900/20";
+                          const vNextColor = inc.vNext.detected
+                            ? inc.vNext.noise ? "text-yellow-400 bg-yellow-900/30" : "text-green-400 bg-green-900/20"
+                            : "text-slate-400 bg-slate-800";
+                          const sevColor = inc.severity === "Sev1"
+                            ? "text-red-400 bg-red-900/30 border-red-800"
+                            : inc.severity === "Sev2"
+                            ? "text-orange-400 bg-orange-900/30 border-orange-800"
+                            : "text-yellow-400 bg-yellow-900/30 border-yellow-800";
+                          // Highlight rows where vNext improves over vCurrent
+                          const improved = (!inc.vCurrent.detected && inc.vNext.detected)
+                            || (inc.vCurrent.noise && !inc.vNext.detected)
+                            || (inc.vCurrent.detected && inc.vNext.detected && inc.vCurrent.time && inc.vNext.time && parseFloat(inc.vNext.time) < parseFloat(inc.vCurrent.time));
+                          return (
+                            <tr key={inc.id} className={`border-b border-slate-700 ${improved ? "bg-green-950/10" : ""}`}>
+                              <td className="py-2 pr-2 text-xs text-slate-500">{inc.date}</td>
+                              <td className="py-2 px-2">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${sevColor}`}>{inc.severity}</span>
+                              </td>
+                              <td className="py-2 px-2 text-sm text-slate-200 border-r border-slate-600">{inc.title}</td>
+                              {/* vCurrent side */}
+                              <td className="py-2 px-2 text-center bg-blue-950/5">
+                                <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${vCurrColor}`}>{vCurrLabel}</span>
+                              </td>
+                              <td className="py-2 px-2 text-center text-xs text-slate-400 border-r border-slate-600 bg-blue-950/5">
+                                {inc.vCurrent.time ?? "—"}
+                              </td>
+                              {/* vNext side */}
+                              <td className="py-2 px-2 text-center bg-teal-950/5">
+                                <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${vNextColor}`}>{vNextLabel}</span>
+                              </td>
+                              <td className="py-2 px-2 text-center text-xs text-slate-400 bg-teal-950/5">
+                                {inc.vNext.time ?? "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
+                  </div>
+                  {/* Summary strip */}
+                  <div className="flex items-center gap-6 mt-3 pt-3 border-t border-slate-700 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      <span className="text-slate-400">New detections:</span>
+                      <span className="text-green-400 font-semibold">{TRAINING_PERIOD_INCIDENTS.filter(i => !i.vCurrent.detected && i.vNext.detected).length}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                      <span className="text-slate-400">Noise removed:</span>
+                      <span className="text-yellow-400 font-semibold">{TRAINING_PERIOD_INCIDENTS.filter(i => i.vCurrent.noise && !i.vNext.detected).length}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      <span className="text-slate-400">Faster TTD:</span>
+                      <span className="text-blue-400 font-semibold">{TRAINING_PERIOD_INCIDENTS.filter(i => i.vCurrent.detected && !i.vCurrent.noise && i.vNext.detected && i.vCurrent.time && i.vNext.time && parseFloat(i.vNext.time) < parseFloat(i.vCurrent.time)).length}</span>
+                    </div>
                   </div>
                 </Card>
               </div>

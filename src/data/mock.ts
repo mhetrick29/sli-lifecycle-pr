@@ -203,6 +203,73 @@ export const SAMPLE_INCIDENTS = [
   },
 ];
 
+export const TRAINING_PERIOD_INCIDENTS = [
+  {
+    id: "301948275",
+    title: "Read availability degradation — West US 2",
+    severity: "Sev2" as const,
+    date: "Jan 8",
+    vCurrent: { detected: true, time: "4.2 min", noise: false },
+    vNext:    { detected: true, time: "3.0 min", noise: false },
+  },
+  {
+    id: "482901537",
+    title: "CosmosDB read latency spike — East US 2",
+    severity: "Sev2" as const,
+    date: "Jan 12",
+    vCurrent: { detected: false, time: null, noise: false },
+    vNext:    { detected: true, time: "3.1 min", noise: false },
+  },
+  {
+    id: "739205814",
+    title: "Throttling on hot partition — West Europe",
+    severity: "Sev1" as const,
+    date: "Jan 15",
+    vCurrent: { detected: false, time: null, noise: false },
+    vNext:    { detected: true, time: "2.8 min", noise: false },
+  },
+  {
+    id: "615847293",
+    title: "Transient failover noise — Central US",
+    severity: "Sev3" as const,
+    date: "Jan 18",
+    vCurrent: { detected: true, time: "4.5 min", noise: true },
+    vNext:    { detected: false, time: null, noise: false },
+  },
+  {
+    id: "928374610",
+    title: "Write availability drop — South East Asia",
+    severity: "Sev1" as const,
+    date: "Jan 22",
+    vCurrent: { detected: false, time: null, noise: false },
+    vNext:    { detected: true, time: "1.9 min", noise: false },
+  },
+  {
+    id: "114729385",
+    title: "Availability dip during failover — North Europe",
+    severity: "Sev2" as const,
+    date: "Jan 25",
+    vCurrent: { detected: true, time: "5.1 min", noise: false },
+    vNext:    { detected: true, time: "2.4 min", noise: false },
+  },
+  {
+    id: "857391024",
+    title: "Intermittent 503s on metadata reads — East US",
+    severity: "Sev3" as const,
+    date: "Jan 28",
+    vCurrent: { detected: true, time: "3.8 min", noise: true },
+    vNext:    { detected: false, time: null, noise: false },
+  },
+  {
+    id: "663500182",
+    title: "Cross-partition query timeout — Brazil South",
+    severity: "Sev2" as const,
+    date: "Feb 1",
+    vCurrent: { detected: false, time: null, noise: false },
+    vNext:    { detected: true, time: "2.1 min", noise: false },
+  },
+];
+
 export const REVIEWERS = {
   required: [
     { name: "James Chen", avatar: "JC", status: "pending" as const },
