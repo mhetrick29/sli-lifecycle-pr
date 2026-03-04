@@ -12,8 +12,7 @@ const TESTING_CHECKS = [
   { name: "Backtest passed", status: "passed" as const, group: "validation", detail: "4/5 incidents detected, 1 noise suppressed" },
   { name: "Scalability constraints", status: "passed" as const, group: "capacity", detail: "PartitionKey cardinality within limits" },
   { name: "Streaming pipeline capacity", status: "passed" as const, group: "capacity", detail: "Sufficient throughput for new dimension" },
-  { name: "Brain GPU quota", status: "passed" as const, group: "capacity", detail: "GPU allocation available for retraining" },
-  { name: "Full data streaming validation", status: "in-progress" as const, group: "streaming", detail: "Validating live data flow…" },
+  { name: "Brain platform capacity", status: "passed" as const, group: "capacity", detail: "Sufficient capacity allocated for retraining" },
   { name: "Brain model training", status: "in-progress" as const, group: "training", detail: "Estimated completion: 18h remaining" },
   { name: "Shadow evaluation", status: "queued" as const, group: "training", detail: "Starts after training completes" },
 ];
@@ -62,13 +61,13 @@ export default function Step2() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Overview");
   const [approvalPolicy, setApprovalPolicy] = useState("review");
-  const [schedule, setSchedule] = useState("immediate");
+  const [schedule, setSchedule] = useState("fastest");
   const [merged, setMerged] = useState(false);
   const [autoPromoteDays, setAutoPromoteDays] = useState("7");
   const [autoPromoteEnabled, setAutoPromoteEnabled] = useState(false);
 
   const handleSimulateComplete = () => {
-    if (approvalPolicy === "auto" || approvalPolicy === "auto-policy" || autoPromoteEnabled) {
+    if (autoPromoteEnabled) {
       setMerged(true);
     } else {
       router.push("/step-3");
@@ -349,14 +348,9 @@ export default function Step2() {
                         </div>
                       </div>
                       {/* Streaming validation */}
-                      <div>
-                        <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                          <span>Streaming validation</span>
-                          <span className="text-blue-400 animate-pulse">verifying data flow…</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500/50 rounded-full animate-pulse" style={{ width: "65%" }} />
-                        </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-600">
+                        <span className="text-green-400">✓</span>
+                        <span className="text-slate-400">Streaming pipeline verified</span>
                       </div>
                       {/* Shadow evaluation */}
                       <div className="flex items-center gap-2 text-xs text-slate-600">
@@ -367,57 +361,82 @@ export default function Step2() {
                   </div>
                 </div>
 
-                {/* Horizontal cards: Approval Policy, Auto-Promotion, Detection Summary */}
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  {/* Approval Policy */}
+                {/* Horizontal cards: Go-Live Schedule, Auto-Promotion, Detection Summary */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {/* Go-Live Schedule — Amazon delivery style */}
                   <div className="p-4 bg-slate-900 rounded-lg border border-slate-700">
                     <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-                      Approval Policy
+                      Go-Live Schedule
                     </h4>
+                    <p className="text-[10px] text-slate-500 mb-3">When should the new SLI version go live in production?</p>
                     <div className="space-y-2">
                       {[
                         {
-                          value: "review",
-                          label: "Review required",
-                          desc: "Must approve after training",
+                          value: "fastest",
+                          label: "Fastest",
+                          date: "Mar 7, 2026",
+                          desc: "~3 days — training + shadow evaluation",
+                          accent: true,
                         },
                         {
-                          value: "auto-policy",
-                          label: "Auto with policy",
-                          desc: "Auto-merge if thresholds met",
+                          value: "standard",
+                          label: "Standard",
+                          date: "Mar 11, 2026",
+                          desc: "~7 days — includes extended shadow period",
+                          accent: false,
                         },
                         {
-                          value: "auto",
-                          label: "Auto-approve",
-                          desc: "Merge when training completes",
+                          value: "conservative",
+                          label: "Conservative",
+                          date: "Mar 18, 2026",
+                          desc: "~14 days — full shadow validation cycle",
+                          accent: false,
+                        },
+                        {
+                          value: "custom",
+                          label: "Choose a date",
+                          date: "",
+                          desc: "Set a specific go-live date",
+                          accent: false,
                         },
                       ].map((opt) => (
                         <label
                           key={opt.value}
-                          className={`flex items-start gap-2 p-2 rounded cursor-pointer border transition-colors ${
-                            approvalPolicy === opt.value
-                              ? "bg-teal-900/30 border-teal-700"
-                              : "border-transparent hover:bg-slate-800"
+                          className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer border transition-colors ${
+                            schedule === opt.value
+                              ? "bg-teal-900/30 border-teal-600"
+                              : "border-slate-700 hover:bg-slate-800"
                           }`}
                         >
                           <input
                             type="radio"
-                            name="policy"
+                            name="schedule"
                             value={opt.value}
-                            checked={approvalPolicy === opt.value}
-                            onChange={(e) => setApprovalPolicy(e.target.value)}
-                            className="mt-0.5 accent-teal-500"
+                            checked={schedule === opt.value}
+                            onChange={(e) => setSchedule(e.target.value)}
+                            className="accent-teal-500"
                           />
-                          <div>
-                            <p className="text-xs text-slate-200 font-medium">
-                              {opt.label}
-                            </p>
-                            <p className="text-[11px] text-slate-500">
-                              {opt.desc}
-                            </p>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-medium ${
+                                opt.accent && schedule === opt.value ? "text-teal-300" : "text-slate-200"
+                              }`}>{opt.label}</span>
+                              {opt.date && (
+                                <span className={`text-xs font-semibold ${
+                                  opt.accent && schedule === opt.value ? "text-teal-400" : "text-slate-300"
+                                }`}>{opt.date}</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-0.5">{opt.desc}</p>
                           </div>
                         </label>
                       ))}
+                      {schedule === "custom" && (
+                        <input
+                          type="date"
+                          className="w-full mt-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200"
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -475,36 +494,8 @@ export default function Step2() {
                       </div>
                     )}
                     {!autoPromoteEnabled && (
-                      <div className="space-y-2">
-                        {[
-                          { value: "immediate", label: "Go live immediately" },
-                          { value: "scheduled", label: "Schedule go-live date" },
-                        ].map((opt) => (
-                          <label
-                            key={opt.value}
-                            className={`flex items-center gap-2 p-2 rounded cursor-pointer border transition-colors ${
-                              schedule === opt.value
-                                ? "bg-teal-900/30 border-teal-700"
-                                : "border-transparent hover:bg-slate-800"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="schedule"
-                              value={opt.value}
-                              checked={schedule === opt.value}
-                              onChange={(e) => setSchedule(e.target.value)}
-                              className="accent-teal-500"
-                            />
-                            <span className="text-xs text-slate-200">{opt.label}</span>
-                          </label>
-                        ))}
-                        {schedule === "scheduled" && (
-                          <input
-                            type="date"
-                            className="w-full mt-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200"
-                          />
-                        )}
+                      <div className="p-2 bg-slate-800 rounded border border-slate-700 mt-1">
+                        <p className="text-[10px] text-slate-500">When disabled, you&apos;ll need to manually review and approve in the Production stage.</p>
                       </div>
                     )}
                   </div>

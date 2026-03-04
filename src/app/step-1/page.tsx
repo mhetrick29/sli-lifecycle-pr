@@ -267,13 +267,14 @@ export default function Step1() {
                   <div>
                     <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Brain Backtest Configuration</h3>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Brain will validate your SLI signal against historical incidents to verify detection coverage before persisting.
+                      Configure what Brain should validate against. Select a time period, incidents to confirm detection, and healthy windows for noise calibration.
                     </p>
                   </div>
 
                   {/* Time range */}
                   <div className="p-3 bg-slate-900 rounded border border-slate-700">
-                    <h4 className="text-[11px] font-medium text-slate-300 mb-2">Evaluation Period</h4>
+                    <h4 className="text-[11px] font-medium text-slate-300 mb-1">Evaluation Period</h4>
+                    <p className="text-[10px] text-slate-500 mb-2">Choose the time window to replay your signal against</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-[10px] text-slate-500">From</label>
@@ -286,9 +287,10 @@ export default function Step1() {
                     </div>
                   </div>
 
-                  {/* Historical incidents */}
+                  {/* Historical incidents to validate */}
                   <div className="p-3 bg-slate-900 rounded border border-slate-700">
-                    <h4 className="text-[11px] font-medium text-slate-300 mb-2">Historical Incidents ({BACKTEST_INCIDENTS.length})</h4>
+                    <h4 className="text-[11px] font-medium text-slate-300 mb-1">Incidents to Validate</h4>
+                    <p className="text-[10px] text-slate-500 mb-2">Select incidents Brain should detect with the new signal</p>
                     <div className="space-y-1.5 max-h-40 overflow-auto">
                       {BACKTEST_INCIDENTS.map((inc) => (
                         <div key={inc.id} className="flex items-center gap-2 text-[11px]">
@@ -304,10 +306,10 @@ export default function Step1() {
                     </div>
                   </div>
 
-                  {/* Healthy periods */}
+                  {/* Healthy periods for noise calibration */}
                   <div className="p-3 bg-slate-900 rounded border border-slate-700">
-                    <h4 className="text-[11px] font-medium text-slate-300 mb-1">Healthy Baseline Periods</h4>
-                    <p className="text-[10px] text-slate-500 mb-2">Used for noise calibration</p>
+                    <h4 className="text-[11px] font-medium text-slate-300 mb-1">Healthy Periods to Check</h4>
+                    <p className="text-[10px] text-slate-500 mb-2">Verify Brain does NOT fire during these known-good windows</p>
                     <div className="space-y-1 text-[11px] text-slate-400">
                       <div className="flex justify-between">
                         <span>Jan 2 – Jan 7, 2025</span>
@@ -317,6 +319,30 @@ export default function Step1() {
                         <span>Jan 19 – Jan 21, 2025</span>
                         <span className="text-green-500">● healthy</span>
                       </div>
+                    </div>
+                    <button className="mt-2 text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer">+ Add healthy period</button>
+                  </div>
+
+                  {/* SLI Signal Chart Preview placeholder */}
+                  <div className="p-3 bg-slate-900 rounded border border-slate-700">
+                    <h4 className="text-[11px] font-medium text-slate-300 mb-1">Signal Preview</h4>
+                    <p className="text-[10px] text-slate-500 mb-2">Estimated SLI signal in the evaluation window</p>
+                    <div className="h-20 bg-slate-800 rounded border border-slate-700/50 flex items-end justify-between px-2 pb-1 gap-px">
+                      {/* Mini bar chart placeholder */}
+                      {[65,72,68,40,75,78,30,82,70,74,76,80,35,85,79,77,81,73,69,71,78,76,82,84].map((h, i) => (
+                        <div
+                          key={i}
+                          className={`flex-1 rounded-t transition-all ${
+                            h < 50 ? "bg-red-500/70" : h < 70 ? "bg-yellow-500/50" : "bg-teal-500/40"
+                          }`}
+                          style={{ height: `${h}%` }}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-[9px] text-slate-600 mt-1">
+                      <span>Jan 1</span>
+                      <span className="text-red-400">▼ incidents</span>
+                      <span>Feb 1</span>
                     </div>
                   </div>
 
@@ -463,7 +489,7 @@ export default function Step1() {
           </button>
           {backtestPhase === "idle" && (
             <button
-              onClick={runBacktest}
+              onClick={() => { setRightTab("backtest"); }}
               className="px-5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm rounded cursor-pointer transition-colors flex items-center gap-1.5"
             >
               🧪 Run Backtest
