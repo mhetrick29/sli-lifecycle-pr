@@ -9,15 +9,14 @@ export default function Home() {
         </div>
         <h1 className="text-3xl font-bold text-slate-100">Brain SLI Lifecycle</h1>
         <p className="text-slate-400 max-w-lg text-lg">
-          PR-style change management for SLI updates. Edit, review, train, and merge — safely.
+          Define, validate, and promote SLI updates through Development → Testing → Production.
         </p>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
+      <div className="grid grid-cols-3 gap-4 text-center text-sm max-w-2xl">
         {[
-          { step: 1, label: "Edit SLI", desc: "Author SLO changes" },
-          { step: 2, label: "Generate PR", desc: "Diff & checks" },
-          { step: 3, label: "Training", desc: "Retrain Brain models" },
-          { step: 4, label: "Review & Merge", desc: "Approve & go live" },
+          { step: 1, label: "Development", desc: "Define SLI signal & backtest" },
+          { step: 2, label: "Testing", desc: "Stream, train & validate" },
+          { step: 3, label: "Production", desc: "Approve & go live" },
         ].map((s) => (
           <div key={s.step} className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-1">
             <div className="w-8 h-8 rounded-full bg-teal-600/20 text-teal-400 flex items-center justify-center text-sm font-bold mx-auto">

@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const STEPS = [
-  { href: "/step-1", label: "Edit SLI", num: 1 },
-  { href: "/step-2", label: "PR & Training", num: 2 },
-  { href: "/step-3", label: "Review & Merge", num: 3 },
+  { href: "/step-1", label: "Development", num: 1 },
+  { href: "/step-2", label: "Testing", num: 2 },
+  { href: "/step-3", label: "Production", num: 3 },
 ];
 
 export default function Stepper() {

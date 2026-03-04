@@ -6,14 +6,16 @@ import { REVIEW_METRICS, SAMPLE_INCIDENTS, TRAINING_PERIOD_INCIDENTS, REVIEWERS 
 import { Card, Button } from "../../components/UI";
 import YamlDiff from "../../components/YamlDiff";
 
-/* ADO-style check items */
-const PR_CHECKS = [
-  { name: "Capacity check (streaming)", status: "passed" },
-  { name: "Capacity check (Brain GPU)", status: "passed" },
-  { name: "Quality validation", status: "passed" },
-  { name: "Security checks", status: "passed" },
-  { name: "Training complete", status: "passed" },
-  { name: "Shadow evaluation", status: "passed" },
+/* Production-stage check items */
+const PRODUCTION_CHECKS = [
+  { name: "Training completed successfully", status: "passed", detail: "Model converged after 36h — no anomalies" },
+  { name: "Shadow evaluation passed", status: "passed", detail: "7-day shadow run: 0 missed incidents, noise ≤ baseline" },
+  { name: "Coverage ≥ current version", status: "passed", detail: "vNext 94.2% vs vCurrent 91.8%" },
+  { name: "Noise rate ≤ current version", status: "passed", detail: "vNext 4.1% vs vCurrent 8.3%" },
+  { name: "Capacity & scalability review", status: "passed", detail: "Streaming + GPU within allocated quota" },
+  { name: "Security & compliance scan", status: "passed", detail: "No vulnerabilities detected" },
+  { name: "Stable for required duration", status: "passed", detail: "7 days with no regressions" },
+  { name: "Owner approval", status: "passed", detail: "Approved by James Chen" },
 ];
 
 function MetricRow({
@@ -302,20 +304,24 @@ export default function Step3() {
                 <div className="px-4 py-3 flex items-center gap-2 bg-slate-900/50">
                   <span className="text-green-400">✓</span>
                   <span className="text-sm text-slate-200 font-medium">
-                    6 of 6 checks passed
+                    8 of 8 production checks passed
                   </span>
+                  <span className="ml-auto text-[10px] text-green-600 uppercase tracking-wide font-semibold">Production Stage</span>
                 </div>
-                {PR_CHECKS.map((check) => (
+                {PRODUCTION_CHECKS.map((check) => (
                   <div
                     key={check.name}
-                    className="px-4 py-2 flex items-center gap-2 border-t border-slate-700"
+                    className="px-4 py-2 flex items-center gap-2 border-t border-slate-700 group"
                   >
                     <span className="text-green-400 text-sm">✓</span>
                     <span className="text-sm text-slate-300">
                       {check.name}
                     </span>
-                    <span className="text-xs text-green-600 ml-auto">
+                    <span className="text-xs text-green-600 ml-auto group-hover:hidden">
                       Passed
+                    </span>
+                    <span className="text-[11px] text-slate-500 ml-auto hidden group-hover:inline">
+                      {check.detail}
                     </span>
                   </div>
                 ))}
@@ -723,7 +729,7 @@ export default function Step3() {
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-slate-700">
         <Button variant="ghost" onClick={() => router.push("/step-2")}>
-          ← Back to Training
+          ← Back to Testing
         </Button>
       </div>
     </div>
