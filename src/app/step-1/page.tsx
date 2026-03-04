@@ -18,20 +18,31 @@ const NAV_ITEMS = [
   { icon: "🩺", label: "Diagnose" },
 ];
 
-const BACKTEST_INCIDENTS = [
-  { id: "INC-301948", title: "Read availability degradation — West US 2", sev: "Sev2", date: "2025-01-08" },
-  { id: "INC-482901", title: "CosmosDB read latency spike — East US 2", sev: "Sev2", date: "2025-01-12" },
-  { id: "INC-739205", title: "Throttling on hot partition — West Europe", sev: "Sev1", date: "2025-01-15" },
-  { id: "INC-615847", title: "Transient failover noise — Central US", sev: "Sev3", date: "2025-01-18" },
-  { id: "INC-928374", title: "Write availability drop — South East Asia", sev: "Sev1", date: "2025-01-22" },
+const BACKTEST_OUTAGES = [
+  { id: "348291576", title: "Read availability degradation — West US 2", sev: "Sev2", date: "2025-01-08", region: "West US 2" },
+  { id: "482901337", title: "CosmosDB read latency spike — East US 2", sev: "Sev2", date: "2025-01-12", region: "East US 2" },
+  { id: "739205814", title: "Throttling on hot partition — West Europe", sev: "Sev1", date: "2025-01-15", region: "West Europe" },
+  { id: "615847290", title: "Transient failover noise — Central US", sev: "Sev3", date: "2025-01-18", region: "Central US" },
+  { id: "928374105", title: "Write availability drop — South East Asia", sev: "Sev1", date: "2025-01-22", region: "South East Asia" },
+  { id: "104857632", title: "Connection pool exhaustion — East US", sev: "Sev2", date: "2025-01-25", region: "East US" },
+  { id: "293847561", title: "Index rebuild latency — North Europe", sev: "Sev3", date: "2025-01-28", region: "North Europe" },
 ];
 
 const BACKTEST_RESULTS = [
-  { id: "INC-301948", detected: true, time: "3.0 min", label: "Detected" },
-  { id: "INC-482901", detected: true, time: "3.1 min", label: "New detection" },
-  { id: "INC-739205", detected: true, time: "2.8 min", label: "New detection" },
-  { id: "INC-615847", detected: false, time: null, label: "Suppressed (noise)" },
-  { id: "INC-928374", detected: true, time: "1.9 min", label: "New detection" },
+  { id: "348291576", vCurrentDetected: true, vCurrentTTD: "4.2 min", vNextDetected: true, vNextTTD: "3.0 min" },
+  { id: "482901337", vCurrentDetected: false, vCurrentTTD: null, vNextDetected: true, vNextTTD: "3.1 min" },
+  { id: "739205814", vCurrentDetected: false, vCurrentTTD: null, vNextDetected: true, vNextTTD: "2.8 min" },
+  { id: "615847290", vCurrentDetected: true, vCurrentTTD: "1.5 min", vNextDetected: false, vNextTTD: null },
+  { id: "928374105", vCurrentDetected: false, vCurrentTTD: null, vNextDetected: true, vNextTTD: "1.9 min" },
+  { id: "104857632", vCurrentDetected: true, vCurrentTTD: "5.1 min", vNextDetected: true, vNextTTD: "2.4 min" },
+  { id: "293847561", vCurrentDetected: true, vCurrentTTD: "3.8 min", vNextDetected: true, vNextTTD: "3.6 min" },
+];
+
+const ICM_TEAMS = [
+  "Azure Cosmos DB — Core Availability",
+  "Azure Cosmos DB — Data Plane",
+  "Azure Cosmos DB — Control Plane",
+  "Azure Cosmos DB — Networking",
 ];
 
 type BacktestPhase = "idle" | "running" | "complete";
@@ -263,18 +274,18 @@ export default function Step1() {
               )}
 
               {rightTab === "backtest" && backtestPhase === "idle" && (
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-4 overflow-auto">
                   <div>
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Brain Backtest Configuration</h3>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Brain Backtest</h3>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Configure what Brain should validate against. Select a time period, incidents to confirm detection, and healthy windows for noise calibration.
+                      Brain will replay your SLI signal over a historical time period and compare detection between the current monitor and your updated signal definition.
                     </p>
                   </div>
 
                   {/* Time range */}
                   <div className="p-3 bg-slate-900 rounded border border-slate-700">
                     <h4 className="text-[11px] font-medium text-slate-300 mb-1">Evaluation Period</h4>
-                    <p className="text-[10px] text-slate-500 mb-2">Choose the time window to replay your signal against</p>
+                    <p className="text-[10px] text-slate-500 mb-2">Time window to replay the signal against</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-[10px] text-slate-500">From</label>
@@ -287,62 +298,95 @@ export default function Step1() {
                     </div>
                   </div>
 
-                  {/* Historical incidents to validate */}
+                  {/* ICM Team */}
                   <div className="p-3 bg-slate-900 rounded border border-slate-700">
-                    <h4 className="text-[11px] font-medium text-slate-300 mb-1">Incidents to Validate</h4>
-                    <p className="text-[10px] text-slate-500 mb-2">Select incidents Brain should detect with the new signal</p>
-                    <div className="space-y-1.5 max-h-40 overflow-auto">
-                      {BACKTEST_INCIDENTS.map((inc) => (
-                        <div key={inc.id} className="flex items-center gap-2 text-[11px]">
-                          <input type="checkbox" defaultChecked className="accent-teal-500 w-3 h-3" />
-                          <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${
-                            inc.sev === "Sev1" ? "bg-red-900/40 text-red-400" :
-                            inc.sev === "Sev2" ? "bg-orange-900/40 text-orange-400" :
-                            "bg-yellow-900/40 text-yellow-400"
-                          }`}>{inc.sev}</span>
-                          <span className="text-slate-400 truncate flex-1">{inc.title}</span>
-                        </div>
+                    <h4 className="text-[11px] font-medium text-slate-300 mb-1">IcM Team</h4>
+                    <p className="text-[10px] text-slate-500 mb-2">Select the team whose outages to evaluate against</p>
+                    <select
+                      defaultValue={ICM_TEAMS[0]}
+                      className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-[11px] text-slate-300 cursor-pointer"
+                    >
+                      {ICM_TEAMS.map((team) => (
+                        <option key={team} value={team}>{team}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Outages to pin (optional) */}
+                  <div className="p-3 bg-slate-900 rounded border border-slate-700">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="text-[11px] font-medium text-slate-300">Pin Outages to Validate</h4>
+                      <span className="text-[9px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">optional</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mb-2">Flag specific outages you want to make sure Brain catches with this signal</p>
+                    <div className="space-y-1.5 max-h-44 overflow-auto">
+                      {BACKTEST_OUTAGES.map((outage) => (
+                        <label key={outage.id} className="flex items-start gap-2 text-[11px] cursor-pointer hover:bg-slate-800/50 rounded p-1 -mx-1 transition-colors">
+                          <input type="checkbox" className="accent-teal-500 w-3 h-3 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-500 font-mono">{outage.id}</span>
+                              <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${
+                                outage.sev === "Sev1" ? "bg-red-900/40 text-red-400" :
+                                outage.sev === "Sev2" ? "bg-orange-900/40 text-orange-400" :
+                                "bg-yellow-900/40 text-yellow-400"
+                              }`}>{outage.sev}</span>
+                            </div>
+                            <p className="text-slate-400 truncate mt-0.5">{outage.title}</p>
+                          </div>
+                        </label>
                       ))}
                     </div>
                   </div>
 
-                  {/* Healthy periods for noise calibration */}
+                  {/* SLI Signal Line Chart Preview */}
                   <div className="p-3 bg-slate-900 rounded border border-slate-700">
-                    <h4 className="text-[11px] font-medium text-slate-300 mb-1">Healthy Periods to Check</h4>
-                    <p className="text-[10px] text-slate-500 mb-2">Verify Brain does NOT fire during these known-good windows</p>
-                    <div className="space-y-1 text-[11px] text-slate-400">
-                      <div className="flex justify-between">
-                        <span>Jan 2 – Jan 7, 2025</span>
-                        <span className="text-green-500">● healthy</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Jan 19 – Jan 21, 2025</span>
-                        <span className="text-green-500">● healthy</span>
-                      </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="text-[11px] font-medium text-slate-300">Signal Preview</h4>
+                      <span className="text-[9px] text-blue-400 bg-blue-900/30 px-1.5 py-0.5 rounded">All Regions</span>
                     </div>
-                    <button className="mt-2 text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer">+ Add healthy period</button>
-                  </div>
-
-                  {/* SLI Signal Chart Preview placeholder */}
-                  <div className="p-3 bg-slate-900 rounded border border-slate-700">
-                    <h4 className="text-[11px] font-medium text-slate-300 mb-1">Signal Preview</h4>
-                    <p className="text-[10px] text-slate-500 mb-2">Estimated SLI signal in the evaluation window</p>
-                    <div className="h-20 bg-slate-800 rounded border border-slate-700/50 flex items-end justify-between px-2 pb-1 gap-px">
-                      {/* Mini bar chart placeholder */}
-                      {[65,72,68,40,75,78,30,82,70,74,76,80,35,85,79,77,81,73,69,71,78,76,82,84].map((h, i) => (
-                        <div
-                          key={i}
-                          className={`flex-1 rounded-t transition-all ${
-                            h < 50 ? "bg-red-500/70" : h < 70 ? "bg-yellow-500/50" : "bg-teal-500/40"
-                          }`}
-                          style={{ height: `${h}%` }}
+                    <p className="text-[10px] text-slate-500 mb-2">CosmosDB-SuccessRate signal over evaluation window</p>
+                    {/* Line chart via SVG */}
+                    <div className="h-24 bg-slate-800 rounded border border-slate-700/50 relative overflow-hidden">
+                      <svg viewBox="0 0 240 80" className="w-full h-full" preserveAspectRatio="none">
+                        {/* Grid lines */}
+                        {[20, 40, 60].map((y) => (
+                          <line key={y} x1="0" y1={y} x2="240" y2={y} stroke="#334155" strokeWidth="0.5" strokeDasharray="4 2" />
+                        ))}
+                        {/* vCurrent line (green, dashed) */}
+                        <polyline
+                          fill="none"
+                          stroke="#4ade80"
+                          strokeWidth="1.5"
+                          strokeDasharray="4 2"
+                          opacity="0.6"
+                          points="0,18 10,16 20,19 30,17 40,14 50,55 60,58 70,20 80,18 90,15 100,17 110,60 120,62 130,22 140,16 150,14 160,13 170,50 180,15 190,14 200,16 210,65 220,18 230,15 240,13"
                         />
-                      ))}
+                        {/* vNext line (teal, solid) */}
+                        <polyline
+                          fill="none"
+                          stroke="#2dd4bf"
+                          strokeWidth="1.8"
+                          points="0,15 10,14 20,16 30,14 40,12 50,30 60,32 70,14 80,13 90,12 100,14 110,28 120,30 130,15 140,13 150,11 160,10 170,25 180,12 190,11 200,13 210,35 220,14 230,12 240,10"
+                        />
+                        {/* Incident markers */}
+                        {[50, 110, 170, 210].map((x, i) => (
+                          <g key={i}>
+                            <line x1={x} y1="0" x2={x} y2="80" stroke="#ef4444" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.5" />
+                            <circle cx={x} cy="5" r="2.5" fill="#ef4444" opacity="0.8" />
+                          </g>
+                        ))}
+                      </svg>
+                      {/* Legend overlay */}
+                      <div className="absolute bottom-1 right-1.5 flex items-center gap-3 text-[8px]">
+                        <span className="flex items-center gap-1"><span className="w-3 h-px bg-green-400 inline-block" style={{ borderTop: '1px dashed #4ade80' }} /> vCurrent</span>
+                        <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-teal-400 inline-block rounded" /> vNext</span>
+                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-red-500 rounded-full inline-block" /> outage</span>
+                      </div>
                     </div>
                     <div className="flex justify-between text-[9px] text-slate-600 mt-1">
-                      <span>Jan 1</span>
-                      <span className="text-red-400">▼ incidents</span>
-                      <span>Feb 1</span>
+                      <span>Jan 1, 2025</span>
+                      <span>Feb 1, 2025</span>
                     </div>
                   </div>
 
@@ -409,50 +453,98 @@ export default function Step1() {
                     <span className="text-green-400 text-lg">✓</span>
                     <div>
                       <p className="text-xs font-semibold text-green-300">Backtest Passed</p>
-                      <p className="text-[10px] text-green-400/70">Signal validated against 5 historical incidents</p>
+                      <p className="text-[10px] text-green-400/70">Jan 1 – Feb 1, 2025 · 7 outages evaluated · All Regions</p>
                     </div>
                   </div>
 
-                  {/* Summary metrics */}
+                  {/* Summary metrics — vCurrent vs vNext */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 bg-slate-900 rounded border border-slate-700">
+                      <p className="text-[9px] text-slate-500 mb-1">vCurrent</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm font-bold text-slate-300">4/7</span>
+                        <span className="text-[10px] text-slate-500">detected</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Avg TTD: 3.7 min</p>
+                    </div>
+                    <div className="p-2 bg-teal-900/20 rounded border border-teal-700/50">
+                      <p className="text-[9px] text-teal-400 mb-1">vNext (proposed)</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm font-bold text-teal-300">6/7</span>
+                        <span className="text-[10px] text-teal-400/70">detected</span>
+                      </div>
+                      <p className="text-[10px] text-teal-400/70 mt-0.5">Avg TTD: 2.8 min</p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { label: "Coverage", value: "4/5", color: "text-green-400" },
-                      { label: "New Detections", value: "3", color: "text-teal-400" },
+                      { label: "New Detections", value: "+3", color: "text-teal-400" },
                       { label: "Noise Filtered", value: "1", color: "text-yellow-400" },
+                      { label: "TTD Improvement", value: "-24%", color: "text-green-400" },
                     ].map((m) => (
-                      <div key={m.label} className="p-2 bg-slate-900 rounded border border-slate-700 text-center">
-                        <p className={`text-sm font-bold ${m.color}`}>{m.value}</p>
-                        <p className="text-[9px] text-slate-500 mt-0.5">{m.label}</p>
+                      <div key={m.label} className="p-1.5 bg-slate-900 rounded border border-slate-700 text-center">
+                        <p className={`text-xs font-bold ${m.color}`}>{m.value}</p>
+                        <p className="text-[8px] text-slate-500 mt-0.5">{m.label}</p>
                       </div>
                     ))}
                   </div>
 
-                  {/* Per-incident results */}
-                  <div className="p-3 bg-slate-900 rounded border border-slate-700">
-                    <h4 className="text-[11px] font-medium text-slate-300 mb-2">Incident Results</h4>
-                    <div className="space-y-2">
-                      {BACKTEST_INCIDENTS.map((inc, i) => {
-                        const result = BACKTEST_RESULTS[i];
-                        return (
-                          <div key={inc.id} className="flex items-start gap-2 text-[11px]">
-                            <span className={`mt-0.5 ${result.detected ? "text-green-400" : "text-slate-500"}`}>
-                              {result.detected ? "✓" : "—"}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-slate-300 truncate">{inc.title}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
-                                  result.label === "New detection" ? "bg-teal-900/40 text-teal-400" :
-                                  result.label === "Suppressed (noise)" ? "bg-yellow-900/40 text-yellow-400" :
-                                  "bg-green-900/40 text-green-400"
-                                }`}>{result.label}</span>
-                                {result.time && <span className="text-[10px] text-slate-500">TTD: {result.time}</span>}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                  {/* Outage comparison table — simplified version of step-3 */}
+                  <div className="bg-slate-900 rounded border border-slate-700 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-slate-700 bg-slate-800/50">
+                      <h4 className="text-[11px] font-medium text-slate-300">Outage Detection Comparison</h4>
                     </div>
+                    {/* Table header */}
+                    <div className="grid grid-cols-[1fr_60px_60px] px-3 py-1.5 border-b border-slate-700 text-[9px] text-slate-500 uppercase tracking-wide">
+                      <span>Outage</span>
+                      <span className="text-center">vCurrent</span>
+                      <span className="text-center">vNext</span>
+                    </div>
+                    {/* Table rows */}
+                    {BACKTEST_OUTAGES.map((outage) => {
+                      const result = BACKTEST_RESULTS.find(r => r.id === outage.id);
+                      if (!result) return null;
+                      const improved = !result.vCurrentDetected && result.vNextDetected;
+                      const regressed = result.vCurrentDetected && !result.vNextDetected;
+                      return (
+                        <div key={outage.id} className={`grid grid-cols-[1fr_60px_60px] px-3 py-1.5 border-b border-slate-700/50 text-[10px] ${
+                          improved ? "bg-teal-900/10" : regressed ? "bg-yellow-900/10" : ""
+                        }`}>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              <span className="text-slate-500 font-mono text-[9px]">{outage.id}</span>
+                              <span className={`px-1 rounded text-[8px] font-bold ${
+                                outage.sev === "Sev1" ? "bg-red-900/40 text-red-400" :
+                                outage.sev === "Sev2" ? "bg-orange-900/40 text-orange-400" :
+                                "bg-yellow-900/40 text-yellow-400"
+                              }`}>{outage.sev}</span>
+                            </div>
+                            <p className="text-slate-400 truncate text-[9px] mt-0.5">{outage.title}</p>
+                          </div>
+                          <div className="flex flex-col items-center justify-center">
+                            {result.vCurrentDetected ? (
+                              <>
+                                <span className="text-green-400 text-[10px]">✓</span>
+                                <span className="text-[8px] text-slate-500">{result.vCurrentTTD}</span>
+                              </>
+                            ) : (
+                              <span className="text-slate-600 text-[10px]">—</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-center justify-center">
+                            {result.vNextDetected ? (
+                              <>
+                                <span className={`text-[10px] ${improved ? "text-teal-400" : "text-green-400"}`}>✓</span>
+                                <span className="text-[8px] text-slate-500">{result.vNextTTD}</span>
+                              </>
+                            ) : (
+                              <span className="text-yellow-500 text-[10px]" title="Noise filtered">○</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Development stage checklist */}
