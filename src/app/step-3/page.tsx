@@ -102,9 +102,9 @@ export default function Step3() {
   const [activeTab, setActiveTab] = useState("Overview");
   const [merged, setMerged] = useState(false);
   const [showGoLive, setShowGoLive] = useState(false);
-  const [goLiveChoice, setGoLiveChoice] = useState("immediate");
-  const [approvalPolicy, setApprovalPolicy] = useState("review");
-  const [schedule, setSchedule] = useState("immediate");
+  const [schedule, setSchedule] = useState("fastest");
+  const [autoPromoteEnabled, setAutoPromoteEnabled] = useState(false);
+  const [autoPromoteDays, setAutoPromoteDays] = useState("7");
 
   const m = REVIEW_METRICS;
 
@@ -136,7 +136,7 @@ export default function Step3() {
           <div className="flex justify-between">
             <span className="text-slate-400">Go-live</span>
             <span className="text-slate-200">
-              {goLiveChoice === "immediate" ? "Immediate" : "Scheduled"}
+              {schedule === "fastest" ? "Fastest (~3 days)" : schedule === "standard" ? "Standard (~7 days)" : schedule === "conservative" ? "Conservative (~14 days)" : "Custom date"}
             </span>
           </div>
         </div>
@@ -149,57 +149,27 @@ export default function Step3() {
 
   return (
     <div className="space-y-6">
-      {/* Go-live dialog */}
+      {/* Merge confirmation dialog */}
       {showGoLive && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="bg-slate-800 border border-slate-600 rounded-xl p-6 w-full max-w-md space-y-4">
-            <h2 className="text-lg font-bold text-slate-100">
-              Set Go-Live Date
-            </h2>
-            <div className="space-y-3">
-              {[
-                { value: "immediate", label: "Go live immediately" },
-                { value: "scheduled", label: "Schedule for later" },
-              ].map((opt) => (
-                <label
-                  key={opt.value}
-                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors ${
-                    goLiveChoice === opt.value
-                      ? "bg-teal-900/30 border-teal-600"
-                      : "bg-slate-900 border-slate-700 hover:border-slate-600"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="goLive"
-                    value={opt.value}
-                    checked={goLiveChoice === opt.value}
-                    onChange={(e) => setGoLiveChoice(e.target.value)}
-                    className="accent-teal-500"
-                  />
-                  <span className="text-sm text-slate-200">{opt.label}</span>
-                </label>
-              ))}
-              {goLiveChoice === "scheduled" && (
-                <input
-                  type="date"
-                  className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200"
-                />
-              )}
+            <h2 className="text-lg font-bold text-slate-100">Confirm &amp; Merge</h2>
+            <p className="text-sm text-slate-400">This will merge the SLI update and schedule go-live per your configuration.</p>
+            <div className="bg-slate-900 rounded border border-slate-700 p-3 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Go-Live Schedule</span>
+                <span className="text-slate-200">
+                  {schedule === "fastest" ? "Fastest (~3 days)" : schedule === "standard" ? "Standard (~7 days)" : schedule === "conservative" ? "Conservative (~14 days)" : "Custom date"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Auto-Promotion</span>
+                <span className="text-slate-200">{autoPromoteEnabled ? "Enabled" : "Manual review"}</span>
+              </div>
             </div>
             <div className="flex gap-3 justify-end pt-2">
-              <Button variant="ghost" onClick={() => setShowGoLive(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="success"
-                onClick={() => {
-                  setShowGoLive(false);
-                  setMerged(true);
-                }}
-              >
-                Confirm &amp; Merge
-              </Button>
+              <Button variant="ghost" onClick={() => setShowGoLive(false)}>Cancel</Button>
+              <Button variant="success" onClick={() => { setShowGoLive(false); setMerged(true); }}>Confirm &amp; Merge</Button>
             </div>
           </div>
         </div>
@@ -417,60 +387,27 @@ export default function Step3() {
                   </div>
                 </div>
 
-                {/* Horizontal cards: Approval Policy, Go-Live, Detection Summary */}
+                {/* Horizontal cards: Go-Live Schedule, Auto-Promotion, Detection Summary */}
                 <div className="grid grid-cols-3 gap-4 mb-4">
-                  {/* Approval Policy */}
+                  {/* Go-Live Schedule — Amazon delivery style */}
                   <div className="p-4 bg-slate-900 rounded-lg border border-slate-700">
                     <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-                      Approval Policy
+                      Go-Live Schedule
                     </h4>
+                    <p className="text-[10px] text-slate-500 mb-3">When should the new SLI version go live in production?</p>
                     <div className="space-y-2">
                       {[
-                        { value: "review", label: "Review required", desc: "Must approve after training" },
-                        { value: "auto-policy", label: "Auto with policy", desc: "Auto-merge if thresholds met" },
-                        { value: "auto", label: "Auto-approve", desc: "Merge when training completes" },
+                        { value: "fastest", label: "Fastest", date: "Mar 7, 2026", desc: "~3 days — training + shadow evaluation", accent: true },
+                        { value: "standard", label: "Standard", date: "Mar 11, 2026", desc: "~7 days — includes extended shadow period", accent: false },
+                        { value: "conservative", label: "Conservative", date: "Mar 18, 2026", desc: "~14 days — full shadow validation cycle", accent: false },
+                        { value: "custom", label: "Choose a date", date: "", desc: "Set a specific go-live date", accent: false },
                       ].map((opt) => (
                         <label
                           key={opt.value}
-                          className={`flex items-start gap-2 p-2 rounded cursor-pointer border transition-colors ${
-                            approvalPolicy === opt.value
-                              ? "bg-teal-900/30 border-teal-700"
-                              : "border-transparent hover:bg-slate-800"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="s3policy"
-                            value={opt.value}
-                            checked={approvalPolicy === opt.value}
-                            onChange={(e) => setApprovalPolicy(e.target.value)}
-                            className="mt-0.5 accent-teal-500"
-                          />
-                          <div>
-                            <p className="text-xs text-slate-200 font-medium">{opt.label}</p>
-                            <p className="text-[11px] text-slate-500">{opt.desc}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Go-Live Scheduling */}
-                  <div className="p-4 bg-slate-900 rounded-lg border border-slate-700">
-                    <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-                      Go-Live Scheduling
-                    </h4>
-                    <div className="space-y-2">
-                      {[
-                        { value: "immediate", label: "Go live immediately" },
-                        { value: "scheduled", label: "Schedule go-live date" },
-                      ].map((opt) => (
-                        <label
-                          key={opt.value}
-                          className={`flex items-center gap-2 p-2 rounded cursor-pointer border transition-colors ${
+                          className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer border transition-colors ${
                             schedule === opt.value
-                              ? "bg-teal-900/30 border-teal-700"
-                              : "border-transparent hover:bg-slate-800"
+                              ? "bg-teal-900/30 border-teal-600"
+                              : "border-slate-700 hover:bg-slate-800"
                           }`}
                         >
                           <input
@@ -481,16 +418,79 @@ export default function Step3() {
                             onChange={(e) => setSchedule(e.target.value)}
                             className="accent-teal-500"
                           />
-                          <span className="text-xs text-slate-200">{opt.label}</span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-medium ${opt.accent && schedule === opt.value ? "text-teal-300" : "text-slate-200"}`}>{opt.label}</span>
+                              {opt.date && <span className={`text-xs font-semibold ${opt.accent && schedule === opt.value ? "text-teal-400" : "text-slate-300"}`}>{opt.date}</span>}
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-0.5">{opt.desc}</p>
+                          </div>
                         </label>
                       ))}
-                      {schedule === "scheduled" && (
-                        <input
-                          type="date"
-                          className="w-full mt-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200"
-                        />
+                      {schedule === "custom" && (
+                        <input type="date" className="w-full mt-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200" />
                       )}
                     </div>
+                  </div>
+
+                  {/* Auto-Promotion to Production */}
+                  <div className="p-4 bg-slate-900 rounded-lg border border-slate-700">
+                    <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                      Auto-Promotion
+                    </h4>
+                    <label className={`flex items-center gap-2 p-2 rounded cursor-pointer border transition-colors mb-3 ${
+                      autoPromoteEnabled ? "bg-teal-900/30 border-teal-700" : "border-slate-700 hover:bg-slate-800"
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={autoPromoteEnabled}
+                        onChange={(e) => setAutoPromoteEnabled(e.target.checked)}
+                        className="accent-teal-500"
+                      />
+                      <div>
+                        <p className="text-xs text-slate-200 font-medium">Enable set &amp; forget</p>
+                        <p className="text-[10px] text-slate-500">Auto-promote when criteria are met</p>
+                      </div>
+                    </label>
+                    {autoPromoteEnabled && (
+                      <div className="space-y-2.5 pt-1 border-t border-slate-700">
+                        <div className="pt-2">
+                          <label className="text-[10px] text-slate-500">Stable duration required</label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <input
+                              type="number"
+                              value={autoPromoteDays}
+                              onChange={(e) => setAutoPromoteDays(e.target.value)}
+                              min="1"
+                              max="30"
+                              className="w-14 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200 text-center"
+                            />
+                            <span className="text-[11px] text-slate-400">days with no regressions</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          {[
+                            { label: "Coverage ≥ current", checked: true },
+                            { label: "Noise rate ≤ current", checked: true },
+                            { label: "No Sev1 misses", checked: true },
+                          ].map((c) => (
+                            <label key={c.label} className="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer">
+                              <input type="checkbox" defaultChecked={c.checked} className="accent-teal-500 w-3 h-3" />
+                              {c.label}
+                            </label>
+                          ))}
+                        </div>
+                        <div className="p-2 bg-teal-900/20 border border-teal-800/50 rounded text-[10px] text-teal-400 flex items-start gap-1.5 mt-1">
+                          <span className="shrink-0">💤</span>
+                          <span>You&apos;ll be notified when the SLI is promoted. No further action needed.</span>
+                        </div>
+                      </div>
+                    )}
+                    {!autoPromoteEnabled && (
+                      <div className="p-2 bg-slate-800 rounded border border-slate-700 mt-1">
+                        <p className="text-[10px] text-slate-500">When disabled, you&apos;ll need to manually review and approve before merging.</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Detection Summary */}
