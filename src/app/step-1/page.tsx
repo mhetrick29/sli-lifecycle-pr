@@ -52,7 +52,8 @@ export default function Step1() {
   const [yaml, setYaml] = useState(NEW_SLO_YAML);
   const [backtestPhase, setBacktestPhase] = useState<BacktestPhase>("idle");
   const [backtestProgress, setBacktestProgress] = useState(0);
-  const [rightTab, setRightTab] = useState<"quality" | "preview">("quality");
+  const [rightTab, setRightTab] = useState<"status" | "quality" | "preview">("status");
+  const [statusTab, setStatusTab] = useState<"errors" | "warnings">("errors");
   const [pinnedOutages, setPinnedOutages] = useState<Set<string>>(new Set());
   const [showAllResults, setShowAllResults] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -222,6 +223,16 @@ export default function Step1() {
             {/* Panel tab bar */}
             <div className="flex mb-2 gap-1">
               <button
+                onClick={() => setRightTab("status")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors cursor-pointer ${
+                  rightTab === "status"
+                    ? "bg-slate-800 text-slate-200 border border-slate-600 border-b-0"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Status
+              </button>
+              <button
                 onClick={() => setRightTab("quality")}
                 className={`px-3 py-1.5 text-xs font-medium rounded-t transition-colors cursor-pointer ${
                   rightTab === "quality"
@@ -246,6 +257,45 @@ export default function Step1() {
             </div>
 
             <div className="flex-1 border border-slate-600 rounded bg-slate-800 flex flex-col overflow-auto">
+              {rightTab === "status" && (
+                <>
+                  <div className="flex border-b border-slate-600">
+                    <button
+                      onClick={() => setStatusTab("errors")}
+                      className={`flex-1 px-3 py-2 text-[12px] font-medium transition-colors cursor-pointer ${
+                        statusTab === "errors"
+                          ? "text-blue-400 border-b-2 border-blue-400 -mb-px"
+                          : "text-slate-400 hover:text-slate-300"
+                      }`}
+                    >
+                      Schema and SLI errors (0)
+                    </button>
+                    <button
+                      onClick={() => setStatusTab("warnings")}
+                      className={`flex-1 px-3 py-2 text-[12px] font-medium transition-colors cursor-pointer ${
+                        statusTab === "warnings"
+                          ? "text-blue-400 border-b-2 border-blue-400 -mb-px"
+                          : "text-slate-400 hover:text-slate-300"
+                      }`}
+                    >
+                      Warnings (0)
+                    </button>
+                  </div>
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-700">
+                        <th className="py-1.5 text-left text-[11px] text-slate-500 font-medium px-3">Code</th>
+                        <th className="py-1.5 text-left text-[11px] text-slate-500 font-medium px-2">Type</th>
+                        <th className="py-1.5 text-left text-[11px] text-slate-500 font-medium px-2">Line number</th>
+                        <th className="py-1.5 text-left text-[11px] text-slate-500 font-medium px-2">Description</th>
+                      </tr>
+                    </thead>
+                  </table>
+                  <div className="flex-1 flex items-center justify-center">
+                    <p className="text-xs text-slate-600">No issues found</p>
+                  </div>
+                </>
+              )}
               {rightTab === "quality" && (
                 <div className="p-4 space-y-3 overflow-auto">
                   <div>
