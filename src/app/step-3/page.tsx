@@ -8,12 +8,16 @@ import YamlDiff from "../../components/YamlDiff";
 
 /* Production-stage check items */
 const PRODUCTION_CHECKS = [
+  { name: "SLIQ 1 — Measurability", status: "passed", detail: "Schema valid, signal well-formed, data fresh" },
+  { name: "SLIQ 2 — Sensitivity", status: "passed", detail: "Time window and detection thresholds calibrated" },
+  { name: "SLIQ 3 — Relevance", status: "passed", detail: "Naming conventions and dimension relevance verified" },
+  { name: "SLIQ 4 — Standards", status: "passed", detail: "LocationID present, standards compliance verified" },
+  { name: "Pre-agg cardinality check", status: "passed", detail: "PartitionKey: 1,247 unique values pre-aggregation (within limits)" },
   { name: "Training completed successfully", status: "passed", detail: "Model converged after 36h — no anomalies" },
   { name: "Shadow evaluation passed", status: "passed", detail: "7-day shadow run: 0 missed incidents, noise ≤ baseline" },
   { name: "Coverage ≥ current version", status: "passed", detail: "vNext 94.2% vs vCurrent 91.8%" },
   { name: "Noise rate ≤ current version", status: "passed", detail: "vNext 4.1% vs vCurrent 8.3%" },
   { name: "Capacity & scalability review", status: "passed", detail: "Streaming + GPU within allocated quota" },
-  { name: "Security & compliance scan", status: "passed", detail: "No vulnerabilities detected" },
   { name: "Stable for required duration", status: "passed", detail: "7 days with no regressions" },
   { name: "Owner approval", status: "passed", detail: "Approved by James Chen" },
 ];
@@ -312,7 +316,7 @@ export default function Step3() {
                 <div className="px-4 py-3 flex items-center gap-2 bg-slate-900/50">
                   <span className="text-green-400">✓</span>
                   <span className="text-sm text-slate-200 font-medium">
-                    8 of 8 production checks passed
+                    12 of 12 production checks passed
                   </span>
                   <span className="ml-auto text-[10px] text-green-600 uppercase tracking-wide font-semibold">Production Stage</span>
                 </div>

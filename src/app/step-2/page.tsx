@@ -8,10 +8,14 @@ import YamlDiff from "../../components/YamlDiff";
 
 /* Review-stage checks — PR-style checklist */
 const REVIEW_CHECKS = [
+  /* SLIQ quality levels — auto-run */
+  { name: "SLIQ 1 — Measurability", status: "passed" as const, required: true, detail: "Schema valid, signal well-formed, data fresh" },
+  { name: "SLIQ 2 — Sensitivity", status: "passed" as const, required: true, detail: "Time window and detection thresholds calibrated" },
+  { name: "SLIQ 3 — Relevance", status: "passed" as const, required: true, detail: "Naming conventions and dimension relevance verified" },
+  { name: "SLIQ 4 — Standards", status: "passed" as const, required: true, detail: "LocationID present, standards compliance verified" },
   /* Infrastructure & validation — auto-run */
-  { name: "SLI schema validation", status: "passed" as const, required: true, detail: "Signal definition is well-formed" },
+  { name: "Pre-agg cardinality check", status: "passed" as const, required: true, detail: "PartitionKey: 1,247 unique values pre-aggregation (within limits)" },
   { name: "Backtest passed", status: "passed" as const, required: true, detail: "6/7 incidents detected, 1 noise suppressed" },
-  { name: "Scalability constraints", status: "passed" as const, required: true, detail: "PartitionKey cardinality within limits" },
   { name: "Streaming pipeline capacity", status: "passed" as const, required: true, detail: "Sufficient throughput for new dimension" },
   { name: "Brain platform capacity", status: "passed" as const, required: true, detail: "Sufficient capacity allocated for retraining" },
   /* Training — always required */

@@ -305,43 +305,58 @@ export default function Step1() {
               {rightTab === "quality" && (
                 <div className="p-4 space-y-3 overflow-auto">
                   <div>
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">SLI Quality</h3>
-                    <p className="text-[10px] text-slate-500 mb-3">Automated validation of your signal definition</p>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">SLI Quality (SLIQ)</h3>
+                    <p className="text-[10px] text-slate-500 mb-3">Automated validation across 4 quality levels</p>
                   </div>
-                  <div className="space-y-1.5">
-                    {[
+                  {[
+                    { level: 1, name: "Measurability", checks: [
                       { label: "Schema validation", status: "pass", detail: "Valid YAML, all required fields present" },
                       { label: "Signal definition", status: "pass", detail: "Well-formed metric expression" },
-                      { label: "Dimension cardinality", status: "warn", detail: "PartitionKey has 1,247 unique values (recommended < 500)" },
-                      { label: "Metric naming conventions", status: "pass", detail: "Follows standard naming patterns" },
-                      { label: "Time window configuration", status: "pass", detail: "5 min window — within supported range" },
                       { label: "Data freshness", status: "pass", detail: "Signal available within 2 min SLA" },
-                    ].map((check) => (
-                      <div key={check.label} className="flex items-start gap-2 text-[11px] group">
-                        <span className={`mt-0.5 ${
-                          check.status === "pass" ? "text-green-400" : "text-yellow-400"
-                        }`}>{check.status === "pass" ? "✓" : "⚠"}</span>
-                        <div className="flex-1">
-                          <span className="text-slate-300">{check.label}</span>
-                          <p className="text-[9px] text-slate-600 hidden group-hover:block mt-0.5">{check.detail}</p>
-                        </div>
-                        <span className={`text-[9px] ${
-                          check.status === "pass" ? "text-green-600" : "text-yellow-500"
-                        }`}>{check.status === "pass" ? "Passed" : "Warning"}</span>
+                    ]},
+                    { level: 2, name: "Sensitivity", checks: [
+                      { label: "Time window configuration", status: "pass", detail: "5 min window — within supported range" },
+                      { label: "Detection threshold calibration", status: "pass", detail: "Threshold within optimal sensitivity range" },
+                    ]},
+                    { level: 3, name: "Relevance", checks: [
+                      { label: "Metric naming conventions", status: "pass", detail: "Follows standard naming patterns" },
+                      { label: "Dimension relevance", status: "pass", detail: "All dimensions map to actionable scope" },
+                    ]},
+                    { level: 4, name: "Standards", checks: [
+                      { label: "LocationID compliance", status: "pass", detail: "LocationID dimension present and valid" },
+                      { label: "Pre-agg cardinality", status: "warn", detail: "PartitionKey has 1,247 unique values pre-aggregation (recommended < 500)" },
+                    ]},
+                  ].map((group) => (
+                    <div key={group.level}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-[9px] font-bold text-teal-400 bg-teal-900/40 px-1.5 py-0.5 rounded">SLIQ {group.level}</span>
+                        <span className="text-[11px] font-medium text-slate-300">{group.name}</span>
                       </div>
-                    ))}
-                  </div>
+                      <div className="space-y-1 ml-1 mb-3">
+                        {group.checks.map((check) => (
+                          <div key={check.label} className="flex items-start gap-2 text-[11px] group">
+                            <span className={`mt-0.5 ${check.status === "pass" ? "text-green-400" : "text-yellow-400"}`}>{check.status === "pass" ? "✓" : "⚠"}</span>
+                            <div className="flex-1">
+                              <span className="text-slate-300">{check.label}</span>
+                              <p className="text-[9px] text-slate-600 hidden group-hover:block mt-0.5">{check.detail}</p>
+                            </div>
+                            <span className={`text-[9px] ${check.status === "pass" ? "text-green-600" : "text-yellow-500"}`}>{check.status === "pass" ? "Passed" : "Warning"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                   {/* Warning detail */}
                   <div className="p-2.5 bg-yellow-900/15 border border-yellow-700/30 rounded text-[10px] text-yellow-300/80 flex items-start gap-2">
                     <span className="shrink-0 mt-0.5">⚠</span>
                     <div>
-                      <p className="font-medium text-yellow-200">High dimension cardinality</p>
-                      <p className="mt-0.5 text-yellow-400/70">The <code className="text-yellow-300 bg-yellow-900/30 px-0.5 rounded">PartitionKey</code> dimension has 1,247 unique values. This may increase training time and resource usage. Consider using <code className="text-yellow-300 bg-yellow-900/30 px-0.5 rounded">PartitionKeyGroup</code> for lower cardinality.</p>
+                      <p className="font-medium text-yellow-200">High pre-agg cardinality</p>
+                      <p className="mt-0.5 text-yellow-400/70">The <code className="text-yellow-300 bg-yellow-900/30 px-0.5 rounded">PartitionKey</code> dimension has 1,247 unique values before aggregation. This may increase training time and resource usage. Consider using <code className="text-yellow-300 bg-yellow-900/30 px-0.5 rounded">PartitionKeyGroup</code> for lower cardinality.</p>
                     </div>
                   </div>
                   {/* Summary */}
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-700">
-                    <span className="text-[10px] text-slate-500">5 passed · 1 warning · 0 errors</span>
+                    <span className="text-[10px] text-slate-500">8 passed · 1 warning · 0 errors</span>
                   </div>
                 </div>
               )}
@@ -726,9 +741,11 @@ export default function Step1() {
                     <h4 className="text-[11px] font-medium text-slate-300 mb-2">Development Checks</h4>
                     <div className="space-y-1.5">
                       {[
-                        { label: "Schema validation", passed: true },
-                        { label: "Signal quality check", passed: true },
-                        { label: "Dimension cardinality", passed: true },
+                        { label: "SLIQ 1 — Measurability", passed: true },
+                        { label: "SLIQ 2 — Sensitivity", passed: true },
+                        { label: "SLIQ 3 — Relevance", passed: true },
+                        { label: "SLIQ 4 — Standards", passed: true },
+                        { label: "Pre-agg cardinality check", passed: true },
                         { label: "Backtest coverage ≥ 60%", passed: true },
                         { label: "No regression vs current", passed: true },
                       ].map((c) => (
@@ -812,7 +829,7 @@ export default function Step1() {
             {/* Quality Checks */}
             <div>
               <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Quality Checks</h4>
-              <p className="text-[10px] text-slate-500 mb-3">Select which checks must pass before go-live. Training is always required.</p>
+              <p className="text-[10px] text-slate-500 mb-3">Select which checks must pass before go-live. Training and SLIQ levels are always required.</p>
               <div className="space-y-1.5">
                 {/* Required — always on */}
                 <div className="flex items-center gap-2 p-2 rounded bg-slate-900 border border-slate-700">
@@ -820,6 +837,22 @@ export default function Step1() {
                   <div className="flex-1">
                     <span className="text-xs text-slate-200 font-medium">Training complete</span>
                     <p className="text-[10px] text-slate-500">Model retraining + shadow evaluation must finish</p>
+                  </div>
+                  <span className="text-[9px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">Required</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded bg-slate-900 border border-slate-700">
+                  <input type="checkbox" checked disabled className="accent-teal-500 w-3.5 h-3.5" />
+                  <div className="flex-1">
+                    <span className="text-xs text-slate-200 font-medium">SLIQ 1–4 quality levels</span>
+                    <p className="text-[10px] text-slate-500">Measurability, sensitivity, relevance, and standards checks</p>
+                  </div>
+                  <span className="text-[9px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">Required</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded bg-slate-900 border border-slate-700">
+                  <input type="checkbox" checked disabled className="accent-teal-500 w-3.5 h-3.5" />
+                  <div className="flex-1">
+                    <span className="text-xs text-slate-200 font-medium">Pre-agg cardinality check</span>
+                    <p className="text-[10px] text-slate-500">Dimension cardinality must be within limits before aggregation</p>
                   </div>
                   <span className="text-[9px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">Required</span>
                 </div>
