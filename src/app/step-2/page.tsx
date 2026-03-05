@@ -6,15 +6,23 @@ import { REVIEWERS } from "../../data/mock";
 import { Card, Button } from "../../components/UI";
 import YamlDiff from "../../components/YamlDiff";
 
-/* Testing-stage validation checks — progressive validation */
-const TESTING_CHECKS = [
-  { name: "SLI schema validation", status: "passed" as const, group: "validation", detail: "Signal definition is well-formed" },
-  { name: "Backtest passed", status: "passed" as const, group: "validation", detail: "4/5 incidents detected, 1 noise suppressed" },
-  { name: "Scalability constraints", status: "passed" as const, group: "capacity", detail: "PartitionKey cardinality within limits" },
-  { name: "Streaming pipeline capacity", status: "passed" as const, group: "capacity", detail: "Sufficient throughput for new dimension" },
-  { name: "Brain platform capacity", status: "passed" as const, group: "capacity", detail: "Sufficient capacity allocated for retraining" },
-  { name: "Brain model training", status: "in-progress" as const, group: "training", detail: "Estimated completion: 18h remaining" },
-  { name: "Shadow evaluation", status: "queued" as const, group: "training", detail: "Starts after training completes" },
+/* Review-stage checks — PR-style checklist */
+const REVIEW_CHECKS = [
+  /* Infrastructure & validation — auto-run */
+  { name: "SLI schema validation", status: "passed" as const, required: true, detail: "Signal definition is well-formed" },
+  { name: "Backtest passed", status: "passed" as const, required: true, detail: "6/7 incidents detected, 1 noise suppressed" },
+  { name: "Scalability constraints", status: "passed" as const, required: true, detail: "PartitionKey cardinality within limits" },
+  { name: "Streaming pipeline capacity", status: "passed" as const, required: true, detail: "Sufficient throughput for new dimension" },
+  { name: "Brain platform capacity", status: "passed" as const, required: true, detail: "Sufficient capacity allocated for retraining" },
+  /* Training — always required */
+  { name: "Brain model training", status: "in-progress" as const, required: true, detail: "Estimated completion: 18h remaining" },
+  { name: "Shadow evaluation", status: "queued" as const, required: true, detail: "Starts after training completes" },
+  /* User-selected quality checks */
+  { name: "Coverage ≥ current version", status: "pending" as const, required: false, detail: "Waiting on training to compare" },
+  { name: "No regression in precision", status: "pending" as const, required: false, detail: "Waiting on training to compare" },
+  { name: "Noise rate ≤ current version", status: "pending" as const, required: false, detail: "Waiting on training to compare" },
+  { name: "No Sev1 misses", status: "pending" as const, required: false, detail: "Waiting on training to compare" },
+  { name: "Minimum 7 days in review", status: "in-progress" as const, required: false, detail: "0 of 7 days elapsed" },
 ];
 
 /* Reviewer row component */
@@ -60,22 +68,20 @@ function ReviewerRow({
 export default function Step2() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Overview");
-  const [approvalPolicy, setApprovalPolicy] = useState("review");
-  const [schedule, setSchedule] = useState("fastest");
   const [merged, setMerged] = useState(false);
-  const [autoPromoteDays, setAutoPromoteDays] = useState("7");
-  const [autoPromoteEnabled, setAutoPromoteEnabled] = useState(false);
+  const [earlyApproved, setEarlyApproved] = useState(false);
+  const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(true);
 
   const handleSimulateComplete = () => {
-    if (autoPromoteEnabled) {
+    if (autoCompleteEnabled && earlyApproved) {
       setMerged(true);
     } else {
       router.push("/step-3");
     }
   };
 
-  const passedCount = TESTING_CHECKS.filter(c => c.status === "passed").length;
-  const totalCount = TESTING_CHECKS.length;
+  const passedCount = REVIEW_CHECKS.filter(c => c.status === "passed").length;
+  const totalCount = REVIEW_CHECKS.length;
 
   if (merged) {
     return (
@@ -84,14 +90,14 @@ export default function Step2() {
           <span className="text-4xl">✅</span>
         </div>
         <h1 className="text-2xl font-bold text-green-400">
-          PR #1247 Auto-Approved &amp; Merged
+          PR #1247 Auto-Completed &amp; Merged
         </h1>
         <p className="text-slate-400 text-center max-w-md">
-          Training completed successfully. SLI update{" "}
+          All checks passed and approval was received. SLI update{" "}
           <strong className="text-slate-200">
             CosmosDB-SuccessRate vNext
           </strong>{" "}
-          was auto-approved and merged per your approval policy.
+          was auto-completed and merged per your policy.
         </p>
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-2 text-sm w-full max-w-md">
           <div className="flex justify-between">
@@ -105,18 +111,12 @@ export default function Step2() {
             <span className="text-slate-500">vNow — Decommissioned</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400">Go-live</span>
-            <span className="text-slate-200">
-              {schedule === "immediate" ? "Immediate" : "Scheduled"}
-            </span>
+            <span className="text-slate-400">Completion</span>
+            <span className="text-slate-200">Auto-completed</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-400">Policy</span>
-            <span className="text-slate-200">
-              {approvalPolicy === "auto"
-                ? "Auto-approve"
-                : "Auto-approve with policy"}
-            </span>
+            <span className="text-slate-200">Auto-complete on all checks passed</span>
           </div>
         </div>
         <Button variant="ghost" onClick={() => router.push("/")}>
@@ -154,7 +154,7 @@ export default function Step2() {
               </h1>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <span className="px-2 py-0.5 bg-yellow-700 text-white text-xs font-medium rounded">
-                  Training in progress
+                  In review
                 </span>
                 <span className="text-slate-400 text-sm">!14849262</span>
                 <span className="text-slate-400 text-sm">
@@ -168,14 +168,27 @@ export default function Step2() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {earlyApproved ? (
+                <span className="px-4 py-1.5 bg-green-900/50 text-green-400 text-sm font-medium rounded border border-green-700 flex items-center gap-1">
+                  Approved ✓
+                </span>
+              ) : (
+                <button
+                  onClick={() => setEarlyApproved(true)}
+                  className="px-4 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded cursor-pointer transition-colors flex items-center gap-1"
+                >
+                  Approve ✓
+                </button>
+              )}
               <button
-                disabled
-                className="px-4 py-1.5 bg-slate-600 text-slate-400 text-sm font-medium rounded cursor-not-allowed flex items-center gap-1"
+                onClick={() => setAutoCompleteEnabled(!autoCompleteEnabled)}
+                className={`px-3 py-1.5 text-sm rounded border cursor-pointer transition-colors flex items-center gap-1 ${
+                  autoCompleteEnabled
+                    ? "bg-teal-900/30 text-teal-300 border-teal-700 hover:bg-teal-900/50"
+                    : "bg-slate-700 hover:bg-slate-600 text-slate-200 border-slate-500"
+                }`}
               >
-                Approve ✓
-              </button>
-              <button className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded border border-slate-500 cursor-pointer transition-colors flex items-center gap-1">
-                ⚙ Set auto-complete
+                ⚙ {autoCompleteEnabled ? "Auto-complete on" : "Set auto-complete"}
               </button>
             </div>
           </div>
@@ -219,6 +232,28 @@ export default function Step2() {
           <div className="flex">
             {/* Main content */}
             <div className="flex-1 p-5 pt-0 space-y-4">
+              {/* Auto-complete banner */}
+              {autoCompleteEnabled && (
+                <div className="p-3 bg-teal-900/20 border border-teal-700/40 rounded-lg text-[12px] flex items-start gap-2.5">
+                  <span className="text-teal-400 mt-0.5 shrink-0">⚡</span>
+                  <div>
+                    <p className="font-medium text-teal-200">Auto-complete is enabled</p>
+                    <p className="mt-0.5 text-teal-400/70">This SLI will go live automatically when all checks pass and a reviewer approves. Target: <strong className="text-teal-300">Mar 11, 2026</strong></p>
+                  </div>
+                </div>
+              )}
+
+              {/* Early approval warning */}
+              {earlyApproved && (
+                <div className="p-3 bg-amber-900/20 border border-amber-700/40 rounded-lg text-[12px] flex items-start gap-2.5">
+                  <span className="text-amber-400 mt-0.5 shrink-0">⚠</span>
+                  <div>
+                    <p className="font-medium text-amber-200">Approved — waiting on checks</p>
+                    <p className="mt-0.5 text-amber-400/70">You&apos;ll be notified if any check fails. {autoCompleteEnabled ? "Auto-complete will proceed once all required checks pass." : "You\u2019ll need to manually complete once checks pass."}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Checks block */}
               <div className="border border-slate-600 rounded-lg overflow-hidden">
                 <div className="px-4 py-3 flex items-center gap-2 bg-slate-900/50">
@@ -231,9 +266,9 @@ export default function Step2() {
                     {passedCount} of {totalCount} checks passed
                     {passedCount < totalCount && ` · ${totalCount - passedCount} remaining`}
                   </span>
-                  <span className="text-[10px] text-slate-500 ml-auto">Testing Stage</span>
+                  <span className="text-[10px] text-slate-500 ml-auto">Review Stage</span>
                 </div>
-                {TESTING_CHECKS.map((check) => (
+                {REVIEW_CHECKS.map((check) => (
                   <div
                     key={check.name}
                     className="px-4 py-2 flex items-center gap-2 border-t border-slate-700 group"
@@ -242,6 +277,8 @@ export default function Step2() {
                       <span className="text-green-400 text-sm w-4 text-center">✓</span>
                     ) : check.status === "in-progress" ? (
                       <span className="text-blue-400 text-sm animate-pulse w-4 text-center">◌</span>
+                    ) : check.status === "pending" ? (
+                      <span className="text-slate-500 text-sm w-4 text-center">◌</span>
                     ) : (
                       <span className="text-slate-600 text-sm w-4 text-center">○</span>
                     )}
@@ -249,28 +286,50 @@ export default function Step2() {
                       <span className="text-sm text-slate-300">{check.name}</span>
                       <p className="text-[10px] text-slate-500 hidden group-hover:block">{check.detail}</p>
                     </div>
-                    <span className={`text-xs ml-auto ${
-                      check.status === "passed" ? "text-green-600" :
-                      check.status === "in-progress" ? "text-blue-400" :
-                      "text-slate-600"
-                    }`}>
-                      {check.status === "passed" ? "Passed" :
-                       check.status === "in-progress" ? "In progress" :
-                       "Queued"}
-                    </span>
+                    <div className="flex items-center gap-2 ml-auto">
+                      {!check.required && (
+                        <span className="text-[9px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">Optional</span>
+                      )}
+                      <span className={`text-xs ${
+                        check.status === "passed" ? "text-green-600" :
+                        check.status === "in-progress" ? "text-blue-400" :
+                        check.status === "pending" ? "text-slate-600" :
+                        "text-slate-600"
+                      }`}>
+                        {check.status === "passed" ? "Passed" :
+                         check.status === "in-progress" ? "In progress" :
+                         check.status === "pending" ? "Pending" :
+                         "Queued"}
+                      </span>
+                    </div>
                   </div>
                 ))}
+                {/* Approval as a check */}
+                <div className="px-4 py-2 flex items-center gap-2 border-t border-slate-700">
+                  {earlyApproved ? (
+                    <span className="text-green-400 text-sm w-4 text-center">✓</span>
+                  ) : (
+                    <span className="text-yellow-400 text-sm w-4 text-center">⏳</span>
+                  )}
+                  <span className="text-sm text-slate-300">Owner approval</span>
+                  <span className="text-[9px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded ml-1">Required</span>
+                  <span className={`text-xs ml-auto ${earlyApproved ? "text-green-600" : "text-yellow-500"}`}>
+                    {earlyApproved ? "Approved" : "Waiting on James Chen"}
+                  </span>
+                </div>
               </div>
 
               {/* Policy items */}
               <div className="space-y-3 px-1">
                 <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-full bg-yellow-900/50 border border-yellow-600 flex items-center justify-center">
-                    <span className="text-yellow-400 text-xs">⏳</span>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    earlyApproved ? "bg-green-900/50 border border-green-600" : "bg-yellow-900/50 border border-yellow-600"
+                  }`}>
+                    <span className={`text-xs ${earlyApproved ? "text-green-400" : "text-yellow-400"}`}>{earlyApproved ? "✓" : "⏳"}</span>
                   </div>
                   <span className="text-sm text-slate-300">
                     <strong className="text-slate-200">James Chen</strong>{" "}
-                    must approve
+                    {earlyApproved ? "approved" : "must approve"}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -361,146 +420,30 @@ export default function Step2() {
                   </div>
                 </div>
 
-                {/* Horizontal cards: Go-Live Schedule, Auto-Promotion, Detection Summary */}
+                {/* Configuration summary — read-only from submission */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  {/* Go-Live Schedule — Amazon delivery style */}
+                  {/* Submission config */}
                   <div className="p-4 bg-slate-900 rounded-lg border border-slate-700">
                     <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-                      Go-Live Schedule
+                      Submission Configuration
                     </h4>
-                    <p className="text-[10px] text-slate-500 mb-3">When should the new SLI version go live in production?</p>
-                    <div className="space-y-2">
-                      {[
-                        {
-                          value: "fastest",
-                          label: "Fastest",
-                          date: "Mar 7, 2026",
-                          desc: "~3 days — training + shadow evaluation",
-                          accent: true,
-                        },
-                        {
-                          value: "standard",
-                          label: "Standard",
-                          date: "Mar 11, 2026",
-                          desc: "~7 days — includes extended shadow period",
-                          accent: false,
-                        },
-                        {
-                          value: "conservative",
-                          label: "Conservative",
-                          date: "Mar 18, 2026",
-                          desc: "~14 days — full shadow validation cycle",
-                          accent: false,
-                        },
-                        {
-                          value: "custom",
-                          label: "Choose a date",
-                          date: "",
-                          desc: "Set a specific go-live date",
-                          accent: false,
-                        },
-                      ].map((opt) => (
-                        <label
-                          key={opt.value}
-                          className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer border transition-colors ${
-                            schedule === opt.value
-                              ? "bg-teal-900/30 border-teal-600"
-                              : "border-slate-700 hover:bg-slate-800"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="schedule"
-                            value={opt.value}
-                            checked={schedule === opt.value}
-                            onChange={(e) => setSchedule(e.target.value)}
-                            className="accent-teal-500"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className={`text-xs font-medium ${
-                                opt.accent && schedule === opt.value ? "text-teal-300" : "text-slate-200"
-                              }`}>{opt.label}</span>
-                              {opt.date && (
-                                <span className={`text-xs font-semibold ${
-                                  opt.accent && schedule === opt.value ? "text-teal-400" : "text-slate-300"
-                                }`}>{opt.date}</span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-slate-500 mt-0.5">{opt.desc}</p>
-                          </div>
-                        </label>
-                      ))}
-                      {schedule === "custom" && (
-                        <input
-                          type="date"
-                          className="w-full mt-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200"
-                        />
-                      )}
+                    <div className="space-y-2 text-[11px]">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Target date</span>
+                        <span className="text-slate-300 font-medium">Mar 11, 2026 (Standard)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Auto-complete</span>
+                        <span className={`font-medium ${autoCompleteEnabled ? "text-teal-400" : "text-slate-400"}`}>{autoCompleteEnabled ? "Enabled" : "Disabled"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Quality checks</span>
+                        <span className="text-slate-300">5 optional enabled</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Auto-Promotion / Set and Forget */}
-                  <div className="p-4 bg-slate-900 rounded-lg border border-slate-700">
-                    <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-                      Auto-Promotion to Production
-                    </h4>
-                    <label className={`flex items-center gap-2 p-2 rounded cursor-pointer border transition-colors mb-3 ${
-                      autoPromoteEnabled ? "bg-teal-900/30 border-teal-700" : "border-slate-700 hover:bg-slate-800"
-                    }`}>
-                      <input
-                        type="checkbox"
-                        checked={autoPromoteEnabled}
-                        onChange={(e) => setAutoPromoteEnabled(e.target.checked)}
-                        className="accent-teal-500"
-                      />
-                      <div>
-                        <p className="text-xs text-slate-200 font-medium">Enable set &amp; forget</p>
-                        <p className="text-[10px] text-slate-500">Auto-promote when criteria are met</p>
-                      </div>
-                    </label>
-                    {autoPromoteEnabled && (
-                      <div className="space-y-2.5 pt-1 border-t border-slate-700">
-                        <div className="pt-2">
-                          <label className="text-[10px] text-slate-500">Stable duration required</label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <input
-                              type="number"
-                              value={autoPromoteDays}
-                              onChange={(e) => setAutoPromoteDays(e.target.value)}
-                              min="1"
-                              max="30"
-                              className="w-14 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200 text-center"
-                            />
-                            <span className="text-[11px] text-slate-400">days with no regressions</span>
-                          </div>
-                        </div>
-                        <div className="space-y-1.5">
-                          {[
-                            { label: "Coverage ≥ current", checked: true },
-                            { label: "Noise rate ≤ current", checked: true },
-                            { label: "No Sev1 misses", checked: true },
-                          ].map((c) => (
-                            <label key={c.label} className="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer">
-                              <input type="checkbox" defaultChecked={c.checked} className="accent-teal-500 w-3 h-3" />
-                              {c.label}
-                            </label>
-                          ))}
-                        </div>
-                        <div className="p-2 bg-teal-900/20 border border-teal-800/50 rounded text-[10px] text-teal-400 flex items-start gap-1.5 mt-1">
-                          <span className="shrink-0">💤</span>
-                          <span>You&apos;ll be notified when the SLI is promoted to Production. No further action needed.</span>
-                        </div>
-                      </div>
-                    )}
-                    {!autoPromoteEnabled && (
-                      <div className="p-2 bg-slate-800 rounded border border-slate-700 mt-1">
-                        <p className="text-[10px] text-slate-500">When disabled, you&apos;ll need to manually review and approve in the Production stage.</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Detection Summary */}
+                  {/* Live Status */}
                   <div className="p-4 bg-slate-900 rounded-lg border border-slate-700">
                     <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
                       Live Status
@@ -529,32 +472,6 @@ export default function Step2() {
                           <span className="text-[9px] text-slate-600">~18h remaining</span>
                         </div>
                       </div>
-                      {/* Skeleton placeholder for results */}
-                      <div className="p-2 bg-slate-800/50 rounded border border-slate-700/50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[11px] text-slate-600">Results preview</span>
-                          <span className="text-[9px] text-slate-700">available after training</span>
-                        </div>
-                        <div className="space-y-1.5">
-                          <div className="h-2 bg-slate-700/50 rounded animate-pulse w-3/4" />
-                          <div className="h-2 bg-slate-700/50 rounded animate-pulse w-1/2" />
-                          <div className="h-2 bg-slate-700/50 rounded animate-pulse w-2/3" />
-                        </div>
-                      </div>
-                      <div className="text-[11px] text-slate-500 border-t border-slate-700 pt-2 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Monitor</span>
-                          <span className="text-slate-300">Cosmos DB Intelligent Monitor</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Mode</span>
-                          <span className="text-red-400 font-medium">Outage</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Est. completion</span>
-                          <span className="text-blue-400">~18 hours</span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -565,7 +482,7 @@ export default function Step2() {
                   className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded cursor-pointer transition-colors flex items-center justify-center gap-2"
                 >
                   ⏩ Simulate Training Complete
-                  {autoPromoteEnabled && <span className="text-blue-200 text-xs ml-1">(will auto-promote)</span>}
+                  {autoCompleteEnabled && earlyApproved && <span className="text-blue-200 text-xs ml-1">(will auto-complete)</span>}
                 </button>
               </div>
             </div>

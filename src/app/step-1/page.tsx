@@ -56,11 +56,17 @@ export default function Step1() {
   const [statusTab, setStatusTab] = useState<"errors" | "warnings">("errors");
   const [pinnedOutages, setPinnedOutages] = useState<Set<string>>(new Set());
   const [showAllResults, setShowAllResults] = useState(false);
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [approvalPolicy, setApprovalPolicy] = useState("review");
-  const [devSchedule, setDevSchedule] = useState("fastest");
-  const [autoPromoteEnabled, setAutoPromoteEnabled] = useState(false);
-  const [autoPromoteDays, setAutoPromoteDays] = useState("7");
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [submitSchedule, setSubmitSchedule] = useState("standard");
+  const [autoCompleteEnabled, setAutoCompleteEnabled] = useState(false);
+  const [submitChecks, setSubmitChecks] = useState({
+    coverage: true,
+    precision: true,
+    noiseRate: true,
+    noSev1Misses: true,
+    minDays: true,
+    minDaysValue: "7",
+  });
   const lines = yaml.split("\n");
 
   const togglePin = useCallback((id: string) => {
@@ -765,10 +771,10 @@ export default function Step1() {
           )}
           {backtestPhase === "complete" && (
             <button
-              onClick={() => setShowSaveDialog(true)}
+              onClick={() => setShowSubmitDialog(true)}
               className="px-5 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm rounded cursor-pointer transition-colors font-medium"
             >
-              Save SLI →
+              Submit SLI →
             </button>
           )}
           <button
@@ -779,141 +785,170 @@ export default function Step1() {
           </button>
           {backtestPhase === "complete" && (
             <span className="ml-auto text-xs text-green-400 flex items-center gap-1">
-              ✓ Backtest passed — ready to save
+              ✓ Backtest passed — ready to submit
             </span>
           )}
         </div>
       </div>
 
-      {/* Save SLI Dialog */}
-      {showSaveDialog && (
+      {/* Submit SLI Dialog */}
+      {showSubmitDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-slate-800 border border-slate-600 rounded-xl p-6 w-full max-w-lg space-y-5">
+          <div className="bg-slate-800 border border-slate-600 rounded-xl p-6 w-full max-w-lg space-y-5 max-h-[90vh] overflow-y-auto">
             <div>
-              <h2 className="text-lg font-bold text-slate-100">Save SLI &amp; Submit for Training</h2>
-              <p className="text-sm text-slate-400 mt-1">Configure how this SLI update should be handled once training completes.</p>
+              <h2 className="text-lg font-bold text-slate-100">Submit SLI</h2>
+              <p className="text-sm text-slate-400 mt-1">Submitting creates a change request. Your SLI will go through training and quality checks before going live.</p>
             </div>
 
-            {/* Scale & capacity notice */}
+            {/* What happens next */}
             <div className="p-3 bg-blue-900/20 border border-blue-700/40 rounded-lg text-[12px] text-blue-200/80 flex items-start gap-2.5">
               <span className="text-blue-400 mt-0.5 shrink-0">ℹ</span>
               <div>
                 <p className="font-medium text-blue-200">What happens next</p>
-                <p className="mt-1 text-blue-300/70">Once saved, Brain will run full scalability &amp; capacity checks, start model retraining, and begin shadow evaluation. You&apos;ll be notified if any issues arise. You can edit these policies any time until training completes.</p>
+                <p className="mt-1 text-blue-300/70">Brain will run scalability &amp; capacity checks, start model retraining, and begin shadow evaluation. You&apos;ll be notified if any issues arise. A reviewer must approve before go-live.</p>
               </div>
             </div>
 
-            {/* Go-Live Schedule */}
+            {/* Quality Checks */}
             <div>
-              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Go-Live Schedule</h4>
-              <p className="text-[10px] text-slate-500 mb-2">When should the new SLI version go live after approval?</p>
+              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Quality Checks</h4>
+              <p className="text-[10px] text-slate-500 mb-3">Select which checks must pass before go-live. Training is always required.</p>
+              <div className="space-y-1.5">
+                {/* Required — always on */}
+                <div className="flex items-center gap-2 p-2 rounded bg-slate-900 border border-slate-700">
+                  <input type="checkbox" checked disabled className="accent-teal-500 w-3.5 h-3.5" />
+                  <div className="flex-1">
+                    <span className="text-xs text-slate-200 font-medium">Training complete</span>
+                    <p className="text-[10px] text-slate-500">Model retraining + shadow evaluation must finish</p>
+                  </div>
+                  <span className="text-[9px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">Required</span>
+                </div>
+                {/* Optional checks */}
+                {[
+                  { key: "coverage" as const, label: "Coverage ≥ current version", desc: "vNext detection rate must meet or exceed vCurrent" },
+                  { key: "precision" as const, label: "No regression in precision", desc: "Precision score must not decrease" },
+                  { key: "noiseRate" as const, label: "Noise rate ≤ current version", desc: "False positive rate must not increase" },
+                  { key: "noSev1Misses" as const, label: "No Sev1 misses", desc: "All Sev1 incidents must be detected" },
+                  { key: "minDays" as const, label: `Minimum ${submitChecks.minDaysValue} days in review`, desc: "Enforce a minimum observation window" },
+                ].map((check) => (
+                  <label
+                    key={check.key}
+                    className={`flex items-center gap-2 p-2 rounded cursor-pointer border transition-colors ${
+                      submitChecks[check.key] ? "bg-slate-900 border-teal-700/50" : "border-slate-700 hover:bg-slate-900/50"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!submitChecks[check.key]}
+                      onChange={(e) => setSubmitChecks(prev => ({ ...prev, [check.key]: e.target.checked }))}
+                      className="accent-teal-500 w-3.5 h-3.5"
+                    />
+                    <div className="flex-1">
+                      <span className="text-xs text-slate-200">{check.label}</span>
+                      <p className="text-[10px] text-slate-500">{check.desc}</p>
+                    </div>
+                  </label>
+                ))}
+                {submitChecks.minDays && (
+                  <div className="flex items-center gap-2 pl-8">
+                    <input
+                      type="number"
+                      value={submitChecks.minDaysValue}
+                      onChange={(e) => setSubmitChecks(prev => ({ ...prev, minDaysValue: e.target.value }))}
+                      min="1"
+                      max="30"
+                      className="w-14 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200 text-center"
+                    />
+                    <span className="text-[11px] text-slate-400">days</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Auto-Complete */}
+            <div>
+              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Auto-Complete</h4>
+              <p className="text-[10px] text-slate-500 mb-2">Like auto-complete on a PR — go live automatically when all enabled checks pass and a reviewer approves.</p>
+              <label className={`flex items-center gap-2 p-2.5 rounded-lg cursor-pointer border transition-colors ${
+                autoCompleteEnabled ? "bg-teal-900/30 border-teal-700" : "border-slate-700 hover:bg-slate-800"
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={autoCompleteEnabled}
+                  onChange={(e) => setAutoCompleteEnabled(e.target.checked)}
+                  className="accent-teal-500"
+                />
+                <div>
+                  <p className="text-xs text-slate-200 font-medium">Enable auto-complete</p>
+                  <p className="text-[10px] text-slate-500">Go live when all checks pass + approved</p>
+                </div>
+              </label>
+              {autoCompleteEnabled && (
+                <div className="mt-2 p-2.5 bg-teal-900/20 border border-teal-800/50 rounded text-[10px] text-teal-400 flex items-start gap-1.5">
+                  <span className="shrink-0">💤</span>
+                  <span>Set and forget — you&apos;ll be notified when the SLI goes live. No further action needed after a reviewer approves.</span>
+                </div>
+              )}
+            </div>
+
+            {/* Target Completion Date */}
+            <div>
+              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Target Completion Date</h4>
+              <p className="text-[10px] text-slate-500 mb-2">When should this change go live? Go-live won&apos;t happen before all checks pass.</p>
               <div className="space-y-1.5">
                 {[
-                  { value: "fastest", label: "Fastest", date: "Mar 7, 2026", desc: "~3 days — training + shadow evaluation", accent: true },
+                  { value: "fastest", label: "Fastest", date: "Mar 7, 2026", desc: "~3 days — as soon as training + checks pass", accent: true },
                   { value: "standard", label: "Standard", date: "Mar 11, 2026", desc: "~7 days — includes extended shadow period", accent: false },
                   { value: "conservative", label: "Conservative", date: "Mar 18, 2026", desc: "~14 days — full shadow validation cycle", accent: false },
-                  { value: "custom", label: "Choose a date", date: "", desc: "Set a specific go-live date", accent: false },
+                  { value: "custom", label: "Choose a date", date: "", desc: "Set a specific target date", accent: false },
                 ].map((opt) => (
                   <label
                     key={opt.value}
                     className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer border transition-colors ${
-                      devSchedule === opt.value
+                      submitSchedule === opt.value
                         ? "bg-teal-900/30 border-teal-600"
                         : "border-slate-700 hover:bg-slate-800"
                     }`}
                   >
                     <input
                       type="radio"
-                      name="devSchedule"
+                      name="submitSchedule"
                       value={opt.value}
-                      checked={devSchedule === opt.value}
-                      onChange={(e) => setDevSchedule(e.target.value)}
+                      checked={submitSchedule === opt.value}
+                      onChange={(e) => setSubmitSchedule(e.target.value)}
                       className="accent-teal-500"
                     />
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <span className={`text-xs font-medium ${opt.accent && devSchedule === opt.value ? "text-teal-300" : "text-slate-200"}`}>{opt.label}</span>
-                        {opt.date && <span className={`text-xs font-semibold ${opt.accent && devSchedule === opt.value ? "text-teal-400" : "text-slate-300"}`}>{opt.date}</span>}
+                        <span className={`text-xs font-medium ${opt.accent && submitSchedule === opt.value ? "text-teal-300" : "text-slate-200"}`}>{opt.label}</span>
+                        {opt.date && <span className={`text-xs font-semibold ${opt.accent && submitSchedule === opt.value ? "text-teal-400" : "text-slate-300"}`}>{opt.date}</span>}
                       </div>
                       <p className="text-[10px] text-slate-500 mt-0.5">{opt.desc}</p>
                     </div>
                   </label>
                 ))}
-                {devSchedule === "custom" && (
+                {submitSchedule === "custom" && (
                   <input type="date" className="w-full mt-1 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200" />
                 )}
               </div>
             </div>
 
-            {/* Auto-Promotion */}
-            <div>
-              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Auto-Promotion to Production</h4>
-              <label className={`flex items-center gap-2 p-2.5 rounded-lg cursor-pointer border transition-colors ${
-                autoPromoteEnabled ? "bg-teal-900/30 border-teal-700" : "border-slate-700 hover:bg-slate-800"
-              }`}>
-                <input
-                  type="checkbox"
-                  checked={autoPromoteEnabled}
-                  onChange={(e) => setAutoPromoteEnabled(e.target.checked)}
-                  className="accent-teal-500"
-                />
-                <div>
-                  <p className="text-xs text-slate-200 font-medium">Enable set &amp; forget</p>
-                  <p className="text-[10px] text-slate-500">Auto-promote to production when all criteria pass</p>
-                </div>
-              </label>
-              {autoPromoteEnabled && (
-                <div className="mt-2 p-3 bg-slate-900 rounded border border-slate-700 space-y-2">
-                  <div>
-                    <label className="text-[10px] text-slate-500">Stable duration required</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <input
-                        type="number"
-                        value={autoPromoteDays}
-                        onChange={(e) => setAutoPromoteDays(e.target.value)}
-                        min="1"
-                        max="30"
-                        className="w-14 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200 text-center"
-                      />
-                      <span className="text-[11px] text-slate-400">days with no regressions</span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    {[
-                      { label: "Coverage ≥ current", checked: true },
-                      { label: "Noise rate ≤ current", checked: true },
-                      { label: "No Sev1 misses", checked: true },
-                    ].map((c) => (
-                      <label key={c.label} className="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer">
-                        <input type="checkbox" defaultChecked={c.checked} className="accent-teal-500 w-3 h-3" />
-                        {c.label}
-                      </label>
-                    ))}
-                  </div>
-                  <div className="p-2 bg-teal-900/20 border border-teal-800/50 rounded text-[10px] text-teal-400 flex items-start gap-1.5">
-                    <span className="shrink-0">💤</span>
-                    <span>You&apos;ll be notified when the SLI is promoted to Production. No further action needed.</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Actions */}
             <div className="flex gap-3 justify-end pt-2 border-t border-slate-700">
               <button
-                onClick={() => setShowSaveDialog(false)}
+                onClick={() => setShowSubmitDialog(false)}
                 className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded border border-slate-500 cursor-pointer transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => {
-                  setShowSaveDialog(false);
+                  setShowSubmitDialog(false);
                   router.push("/step-2");
                 }}
                 className="px-5 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded cursor-pointer transition-colors"
               >
-                Save &amp; Submit →
+                Submit →
               </button>
             </div>
           </div>

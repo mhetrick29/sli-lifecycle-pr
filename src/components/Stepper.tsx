@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const STEPS = [
   { href: "/step-1", label: "Development", num: 1 },
-  { href: "/step-2", label: "Testing", num: 2 },
+  { href: "/step-2", label: "Review", num: 2 },
   { href: "/step-3", label: "Production", num: 3 },
 ];
 
