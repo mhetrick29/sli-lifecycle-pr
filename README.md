@@ -28,6 +28,16 @@ Open [http://localhost:3000](http://localhost:3000) and click "Start Walkthrough
 - Tailwind CSS
 - All mock data — no external APIs
 
+## Design: PR-to-SLI Concept Mapping
+
+| PR concept | SLI lifecycle equivalent |
+|---|---|
+| Submit PR | Submit SLI change (enters Testing) |
+| CI checks | Quality gates (training status, coverage, precision, min days in testing) |
+| Approve | Someone reviews and approves the SLI |
+| Auto-complete | Auto-promote (go live when all checks pass) |
+| Complete/Merge | Go live (SLI enters Production) |
+
 ## Build
 
 ```bash
